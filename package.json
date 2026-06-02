@@ -24,11 +24,11 @@
   "//": "START EXTENSION ATTRIBUTES",
   "name": "guy",
   "version": "0.0.1",
-  "description": "Extension description",
-  "displayName": "Extension display name",
+  "description": "Generate interactive Python control-flow graphs inside VS Code.",
+  "displayName": "GUY: Graph Your Code",
   "repository": {
     "type": "git",
-    "url": "https://github.com/YOURNAME"
+    "url": "https://github.com/gm64x/guy-vscode"
   },
   "contributes": {
     "commands": [
