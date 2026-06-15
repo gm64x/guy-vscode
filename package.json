@@ -3,21 +3,119 @@
   "displayName": "Guy",
   "description": "Graphing Utility for Your code",
   "version": "0.0.1",
+  "publisher": "gm64x",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.120.0"
   },
   "categories": [
+    "Visualization",
+    "Education",
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:python",
+    "onCommand:guy.generateCfgFromFile",
+    "onCommand:guy.generateCfgFromSelection",
+    "onCommand:guy.generateCfgFromCurrentFunction",
+    "onCommand:guy.exportCfgAsMermaid",
+    "onCommand:guy.exportCfgAsDot",
+    "onCommand:guy.exportCfgAsAscii",
+    "onCommand:guy.copyCfgJson",
+    "onCommand:guy.exportCfgAsSvg",
+    "onCommand:guy.exportCfgAsPng",
+    "onCommand:guy.toggleGraphDetailMode"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "guy.helloWorld",
-        "title": "Hello World"
+        "command": "guy.generateCfgFromFile",
+        "title": "Generate CFG from File",
+        "category": "GUY",
+        "icon": {
+          "light": "media/icons/git-branch-light.svg",
+          "dark": "media/icons/git-branch-dark.svg"
+        }
+      },
+      {
+        "command": "guy.generateCfgFromSelection",
+        "title": "Generate CFG from Selection",
+        "category": "GUY"
+      },
+      {
+        "command": "guy.generateCfgFromCurrentFunction",
+        "title": "Generate CFG from Current Function",
+        "category": "GUY"
+      },
+      {
+        "command": "guy.toggleGraphDetailMode",
+        "title": "Toggle Simplified/Detailed CFG View",
+        "category": "GUY"
       }
     ]
+  },
+  "menus": {
+    "editor/title": [
+      {
+        "command": "guy.generateCfgFromFile",
+        "when": "resourceLangId == python",
+        "group": "navigation"
+      }
+    ],
+    "editor/context": [
+      {
+        "command": "guy.generateCfgFromSelection",
+        "when": "resourceLangId == python && editorHasSelection",
+        "group": "navigation"
+      },
+      {
+        "command": "guy.generateCfgFromCurrentFunction",
+        "when": "resourceLangId == python",
+        "group": "navigation"
+      }
+    ]
+  },
+  "configuration": {
+    "title": "GUY",
+    "properties": {
+      "guy.autoOpenPreview": {
+        "type": "boolean",
+        "default": true,
+        "description": "Open the CFG preview automatically after generation."
+      },
+      "guy.graphLayout": {
+        "type": "string",
+        "default": "top-bottom",
+        "enum": [
+          "top-bottom",
+          "left-right"
+        ],
+        "description": "Default graph layout direction."
+      },
+      "guy.showMetricsPanel": {
+        "type": "boolean",
+        "default": false,
+        "description": "Show the metrics panel in the CFG preview."
+      },
+      "guy.highlightCodeOnNodeClick": {
+        "type": "boolean",
+        "default": true,
+        "description": "Highlight source code when nodes or edges are selected."
+      },
+      "guy.maxNodesBeforeWarning": {
+        "type": "number",
+        "default": 100,
+        "minimum": 10,
+        "description": "Show a visual complexity warning when the graph exceeds this number of nodes."
+      },
+      "guy.highComplexityThreshold": {
+        "type": "number",
+        "default": 10,
+        "minimum": 1,
+        "description": "Cyclomatic complexity threshold used to show lightweight suggestions."
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
