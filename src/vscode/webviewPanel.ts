@@ -21,16 +21,24 @@ export class GuyWebviewPanel {
   ) {}
 
   show(cfg: CFG): void {
+    const title = getPanelTitle(cfg);
+
     if (!this.panel) {
       this.panel = vscode.window.createWebviewPanel(
         "guyCfgPreview",
-        "GUY CFG Preview",
+        title,
         vscode.ViewColumn.Beside,
         {
           enableScripts: true,
           retainContextWhenHidden: true,
           localResourceRoots: [this.extensionUri],
         },
+      );
+      this.panel.iconPath = vscode.Uri.joinPath(
+        this.extensionUri,
+        "media",
+        "icons",
+        "gfc.svg",
       );
       this.panel.onDidDispose(() => {
         this.panel = undefined;
@@ -44,6 +52,7 @@ export class GuyWebviewPanel {
         cfg,
       );
     } else {
+      this.panel.title = title;
       void this.panel.webview.postMessage({ type: "CFG_DATA", payload: cfg });
     }
 
@@ -75,4 +84,9 @@ export class GuyWebviewPanel {
       payload: { message },
     });
   }
+}
+
+function getPanelTitle(cfg: CFG): string {
+  const fileName = cfg.sourceMeta.fileName?.split(/[\\/]/).pop() ?? "CFG";
+  return `${fileName} | GFC`;
 }
