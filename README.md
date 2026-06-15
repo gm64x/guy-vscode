@@ -1,71 +1,121 @@
-# guy README
+# Guy
 
-This is the README for your extension "guy". After writing up a brief description, we recommend including the following sections.
+Guy is a VS Code extension for visualizing Python control-flow graphs (CFGs).
+It parses Python code, builds an interactive graph, and shows useful control-flow
+metrics such as cyclomatic complexity.
+
+**GUY** stands for **Graphing Utility for Your code**.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- Generate a CFG from:
+  - the whole active Python file;
+  - the current editor selection;
+  - the Python function under the cursor.
+- Preview the graph in an interactive webview powered by React Flow.
+- Toggle between simplified and detailed CFG views.
+- Navigate between the graph and source code by selecting nodes, edges, functions,
+  or independent paths.
+- Inspect graph metrics:
+  - `V(G)` cyclomatic complexity;
+  - nodes;
+  - edges;
+  - decisions;
+  - connected components.
+- View independent paths, with limits for large graphs to keep the preview responsive.
+- Receive lightweight suggestions when the graph exceeds the configured complexity threshold.
+- Analyze common Python control-flow structures including `if`/`elif`/`else`, `for`,
+  `while`, `return`, `break`, and `continue`.
 
-For example if there is an image subfolder under your extension project workspace:
+## Usage
 
-\!\[feature X\]\(images/feature-x.png\)
+Open a Python file and run one of the `GUY` commands from the Command Palette.
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+| Command | Description |
+| --- | --- |
+| `GUY: Generate CFG from File` | Builds a graph for the active Python file. |
+| `GUY: Generate CFG from Selection` | Builds a graph for the selected Python code. |
+| `GUY: Generate CFG from Current Function` | Builds a graph for the function containing the cursor. |
+| `GUY: Toggle Simplified/Detailed CFG View` | Switches the current graph between simplified and detailed mode. |
 
-## Requirements
+The file command is also available from the Python editor title bar. Selection and
+current-function commands are available from the Python editor context menu.
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+## Webview controls
 
-## Extension Settings
+The CFG preview includes:
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+- a graph canvas with fit, center, reset zoom, zoom in, and zoom out controls;
+- a collapsible sidebar with nodes, edges, functions, and independent paths;
+- a metrics panel with the cyclomatic complexity formula;
+- source highlighting when graph items are selected;
+- a simplified/detailed mode toggle in the preview header.
 
-For example:
+## Extension settings
 
 This extension contributes the following settings:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+| Setting | Default | Description |
+| --- | --- | --- |
+| `guy.autoOpenPreview` | `true` | Open the CFG preview automatically after generation. |
+| `guy.graphLayout` | `top-bottom` | Default graph layout direction. Supported values: `top-bottom`, `left-right`. |
+| `guy.showMetricsPanel` | `false` | Show the metrics panel in the CFG preview. |
+| `guy.highlightCodeOnNodeClick` | `true` | Highlight source code when nodes or edges are selected. |
+| `guy.maxNodesBeforeWarning` | `100` | Show a visual complexity warning when the graph exceeds this number of nodes. |
+| `guy.highComplexityThreshold` | `10` | Cyclomatic complexity threshold used to show lightweight suggestions. |
 
-## Known Issues
+## Requirements
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- VS Code `^1.120.0`.
+- Python source files (`.py` or `python` language mode).
 
-## Release Notes
+## Development
 
-Users appreciate release notes as you update your extension.
+Install dependencies:
 
-### 1.0.0
+```sh
+npm install
+```
 
-Initial release of ...
+Run checks and build the extension:
 
-### 1.0.1
+```sh
+npm run compile
+```
 
-Fixed issue #.
+Create a production bundle:
 
-### 1.1.0
+```sh
+npm run package
+```
 
-Added features X, Y, and Z.
+Run tests:
 
----
+```sh
+npm test
+```
 
-## Following extension guidelines
+Useful development scripts:
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+| Script | Description |
+| --- | --- |
+| `npm run check-types` | Run TypeScript type checking. |
+| `npm run lint` | Run ESLint over `src`. |
+| `npm run watch` | Run TypeScript and esbuild watchers in parallel. |
+| `npm run compile-tests` | Compile test sources. |
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+## Example files
 
-## Working with Markdown
+Example Python inputs are available under `src/examples`:
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+- `sequential.py`
+- `conditional.py`
+- `functions.py`
+- `loop_break_continue.py`
+- `example_simplified_detailed.py`
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+## Known limitations
 
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+- CFG generation currently targets Python only.
+- Tree-sitter recovery can produce incomplete graphs when the source contains syntax errors.
+- Independent paths are hidden for very large graphs to keep the preview responsive.
