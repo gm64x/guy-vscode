@@ -1,0 +1,719 @@
+/* GUY Webview — VS Code native, compact */
+
+:root {
+    --panel-width: clamp(260px, 28vw, 320px);
+
+    --bg: var(--vscode-editor-background, #1e1e1e);
+    --fg: var(--vscode-editor-foreground, #cccccc);
+    --muted: var(--vscode-descriptionForeground, #858585);
+    --accent: var(--vscode-focusBorder, #007acc);
+    --border: var(--vscode-panel-border, #3c3c3c);
+    --border-soft: color-mix(in srgb, var(--border) 55%, transparent);
+    --surface: var(--vscode-sideBar-background, #252526);
+    --surface-hover: var(--vscode-list-hoverBackground, #2a2d2e);
+    --selection: var(
+        --vscode-list-activeSelectionBackground,
+        rgba(0, 120, 212, 0.22)
+    );
+
+    --error: var(--vscode-errorForeground, #f44747);
+    --warning: var(--vscode-editorWarning-foreground, #cca700);
+    --success: var(--vscode-terminal-ansiGreen, #4ec9b0);
+    --info: var(--vscode-editorInfoForeground, #3794ff);
+
+    --node-entry: var(--vscode-terminal-ansiGreen, #4ec9b0);
+    --node-exit: var(--vscode-errorForeground, #f44747);
+    --node-condition: var(--vscode-editorWarning-foreground, #dcdcaa);
+    --node-loop: var(--vscode-terminal-ansiMagenta, #c586c0);
+    --node-return: var(--vscode-terminal-ansiBlue, #569cd6);
+    --node-merge: var(--vscode-terminal-ansiCyan, #4ec9b0);
+    --node-statement: var(--vscode-editor-foreground, #cccccc);
+
+    --node-entry-bg: color-mix(in srgb, var(--node-entry) 13%, transparent);
+    --node-exit-bg: color-mix(in srgb, var(--node-exit) 12%, transparent);
+    --node-condition-bg: color-mix(
+        in srgb,
+        var(--node-condition) 10%,
+        transparent
+    );
+    --node-loop-bg: color-mix(in srgb, var(--node-loop) 10%, transparent);
+    --node-return-bg: color-mix(in srgb, var(--node-return) 10%, transparent);
+    --node-merge-bg: color-mix(in srgb, var(--node-merge) 10%, transparent);
+
+    --edge: var(--vscode-editorIndentGuide-background, #6b7280);
+    --edge-label-bg: var(--vscode-editor-background, #1e1e1e);
+
+    --hl-keyword: var(--vscode-symbolIcon-keywordForeground, #c586c0);
+    --hl-string: var(--vscode-symbolIcon-stringForeground, #ce9178);
+    --hl-number: var(--vscode-symbolIcon-numberForeground, #b5cea8);
+    --hl-comment: var(--vscode-editorLineNumber-foreground, #6a9955);
+
+    --font-display: var(
+        --vscode-font-family,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif
+    );
+    --font-mono: var(
+        --vscode-editor-font-family,
+        Consolas,
+        "Courier New",
+        monospace
+    );
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html,
+body,
+#root,
+.shell {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.shell {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--panel-width);
+    grid-template-rows: minmax(0, 1fr);
+    transition: grid-template-columns 160ms ease;
+}
+
+.shell.collapsed {
+    grid-template-columns: minmax(0, 1fr) 0;
+}
+
+.shell.collapsed aside {
+    width: 0;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    visibility: hidden;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+header {
+    position: absolute;
+    right: 12px;
+    top: 10px;
+    z-index: 20;
+}
+
+.header-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.title {
+    display: none;
+}
+
+.meta {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.graph-wrap {
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+    background: var(--bg);
+}
+
+.react-flow {
+    background: var(--bg) !important;
+}
+
+.react-flow__background pattern line,
+.react-flow__background pattern circle {
+    stroke: var(--border-soft);
+}
+
+/* Nodes */
+.react-flow__node {
+    min-width: 112px;
+    max-width: 220px;
+    padding: 6px 9px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--fg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.react-flow__node:hover,
+.react-flow__node.selected {
+    border-color: var(--accent) !important;
+}
+
+.cfg-node-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    cursor: pointer;
+    font-family: var(--font-mono);
+}
+
+.cfg-node-kind {
+    color: var(--muted);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.cfg-node-label {
+    max-width: 170px;
+    overflow: hidden;
+    color: var(--fg);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cfg-node-code,
+.cfg-node-line {
+    max-width: 170px;
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.react-flow__node.cfg-entry,
+.react-flow__node.cfg-merge {
+    border-color: var(--node-entry);
+    border-radius: 999px;
+    background: var(--node-entry-bg);
+}
+
+.react-flow__node.cfg-exit {
+    border-color: var(--node-exit);
+    border-radius: 999px;
+    background: var(--node-exit-bg);
+}
+
+.react-flow__node.cfg-condition {
+    border-color: var(--node-condition);
+    background: var(--node-condition-bg);
+}
+
+.react-flow__node.cfg-loop {
+    border-color: var(--node-loop);
+    background: var(--node-loop-bg);
+}
+
+.react-flow__node.cfg-return {
+    border-color: var(--node-return);
+    background: var(--node-return-bg);
+}
+
+.react-flow__node.cfg-entry .cfg-node-kind,
+.node-kind.entry,
+.node-kind.merge {
+    color: var(--node-entry);
+}
+
+.react-flow__node.cfg-exit .cfg-node-kind,
+.node-kind.exit {
+    color: var(--node-exit);
+}
+
+.react-flow__node.cfg-condition .cfg-node-kind,
+.node-kind.condition {
+    color: var(--node-condition);
+}
+
+.react-flow__node.cfg-loop .cfg-node-kind,
+.node-kind.loop {
+    color: var(--node-loop);
+}
+
+.react-flow__node.cfg-return .cfg-node-kind,
+.node-kind.return {
+    color: var(--node-return);
+}
+
+/* Edges */
+.react-flow__edge-path {
+    stroke: var(--edge);
+    stroke-width: 1.35;
+    opacity: 0.75;
+}
+
+.react-flow__edge:hover .react-flow__edge-path,
+.react-flow__edge.selected .react-flow__edge-path {
+    stroke: var(--accent);
+    stroke-width: 2;
+    opacity: 1;
+}
+
+.react-flow__edge-text {
+    fill: var(--fg) !important;
+    font-family: var(--font-mono) !important;
+    font-size: 10px !important;
+}
+
+.react-flow__edge-textbg {
+    fill: var(--edge-label-bg) !important;
+    stroke: var(--border) !important;
+    stroke-width: 0.5 !important;
+    rx: 2 !important;
+    ry: 2 !important;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+    animation: dash 0.45s linear infinite;
+    stroke-dasharray: 5 4;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: -9;
+    }
+}
+
+.react-flow__attribution {
+    display: none !important;
+}
+
+/* Floating controls */
+.toolbar {
+    position: absolute;
+    left: 14px;
+    bottom: 14px;
+    z-index: 30;
+    display: flex;
+}
+
+.tool-group {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--surface);
+}
+
+button {
+    min-height: 26px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--fg);
+    cursor: pointer;
+    font: inherit;
+    font-size: 11px;
+    transition:
+        background 100ms ease,
+        border-color 100ms ease,
+        color 100ms ease;
+    white-space: nowrap;
+}
+
+button:hover {
+    border-color: var(--border-soft);
+    background: var(--surface-hover);
+}
+
+button:focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: 1px;
+}
+
+.icon-button {
+    display: inline-grid;
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
+    place-items: center;
+    padding: 0;
+}
+
+.view-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 28px;
+    padding: 0 9px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--muted);
+}
+
+.view-toggle:hover {
+    color: var(--fg);
+}
+
+/* Sidebar */
+aside {
+    z-index: 10;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    overflow: hidden auto;
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+}
+
+aside::before {
+    content: "PROPERTIES";
+    display: block;
+    padding: 14px 14px 8px;
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+section {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+section:last-child {
+    border-bottom: 0;
+}
+
+h2 {
+    margin: 0 0 9px;
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.metric {
+    min-height: 64px;
+    padding: 10px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    text-align: center;
+}
+
+.metric:hover {
+    border-color: var(--accent);
+}
+
+.metric strong {
+    display: block;
+    color: var(--fg);
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.metric span {
+    display: block;
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.metric.good strong {
+    color: var(--success);
+}
+
+.metric.warning strong {
+    color: var(--warning);
+}
+
+.metric.critical strong {
+    color: var(--error);
+}
+
+.formula {
+    margin-top: 12px;
+    color: var(--fg);
+    font-size: 11px;
+}
+
+.tabs-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    gap: 0;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--surface);
+}
+
+.tab-btn {
+    flex: 1;
+    min-height: 36px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    color: var(--muted);
+    font-family: var(--font-display);
+    font-size: 11px;
+}
+
+.tab-btn:hover {
+    background: transparent;
+    color: var(--fg);
+}
+
+.tab-btn.active {
+    border-bottom-color: var(--accent);
+    color: var(--accent);
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+.tab-panel section {
+    padding-top: 12px;
+}
+
+.list {
+    display: flex;
+    max-height: 260px;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+}
+
+.list::-webkit-scrollbar,
+aside::-webkit-scrollbar,
+.code-preview::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.list::-webkit-scrollbar-thumb,
+aside::-webkit-scrollbar-thumb,
+.code-preview::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--border);
+}
+
+.list button {
+    min-height: 30px;
+    overflow: hidden;
+    padding: 5px 7px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--fg);
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.list button:hover {
+    background: var(--surface-hover);
+}
+
+.list button.selected-item {
+    background: var(--selection);
+    color: var(--fg);
+}
+
+.node-kind {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 1px 4px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--muted) 12%, transparent);
+    color: var(--muted);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.node-kind.entry,
+.node-kind.merge {
+    background: var(--node-entry-bg);
+}
+
+.node-kind.exit {
+    background: var(--node-exit-bg);
+}
+
+.node-kind.condition {
+    background: var(--node-condition-bg);
+}
+
+.node-kind.loop {
+    background: var(--node-loop-bg);
+}
+
+.node-kind.return {
+    background: var(--node-return-bg);
+}
+
+.code-preview {
+    margin-top: 7px;
+    overflow-x: auto;
+    padding: 8px 9px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.code-preview .kw {
+    color: var(--hl-keyword);
+}
+
+.code-preview .str {
+    color: var(--hl-string);
+}
+
+.code-preview .num {
+    color: var(--hl-number);
+}
+
+.code-preview .comment {
+    color: var(--hl-comment);
+    font-style: italic;
+}
+
+.warning,
+.suggestion-item {
+    margin-top: 8px;
+    padding: 7px 8px;
+    border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--warning) 6%, transparent);
+    color: var(--fg);
+    font-size: 11px;
+}
+
+.path-arrow {
+    margin: 0 4px;
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.node-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.node-detail-line {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.empty {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    color: var(--muted);
+    text-align: center;
+}
+
+.empty-title,
+.error-title,
+.loading-text {
+    color: var(--fg);
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.error-title {
+    color: var(--error);
+}
+
+.empty-subtitle {
+    max-width: 310px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.loading-spinner {
+    width: 30px;
+    height: 30px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.65s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 720px) {
+    .shell {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(260px, 1fr) minmax(180px, 38vh);
+    }
+
+    .shell.collapsed {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr;
+    }
+
+    aside {
+        border-top: 1px solid var(--border);
+        border-left: 0;
+    }
+
+    header {
+        right: 10px;
+        top: 8px;
+    }
+}

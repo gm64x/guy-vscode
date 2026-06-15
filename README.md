@@ -1,92 +1,121 @@
-# Bun VSCode Extension Template
+# Guy
 
-A Bun template that contains the scaffolding for a VSCode extension.
+Guy is a VS Code extension for visualizing Python control-flow graphs (CFGs).
+It parses Python code, builds an interactive graph, and shows useful control-flow
+metrics such as cyclomatic complexity.
+
+**GUY** stands for **Graphing Utility for Your code**.
 
 ## Features
 
-- bun integration
-- typescript support
-- jest support for testing
-- running your extension via a VSCode launch config (i.e. using `F5`)
-- placeholder extension metatdata in `package.json`
+- Generate a CFG from:
+  - the whole active Python file;
+  - the current editor selection;
+  - the Python function under the cursor.
+- Preview the graph in an interactive webview powered by React Flow.
+- Toggle between simplified and detailed CFG views.
+- Navigate between the graph and source code by selecting nodes, edges, functions,
+  or independent paths.
+- Inspect graph metrics:
+  - `V(G)` cyclomatic complexity;
+  - nodes;
+  - edges;
+  - decisions;
+  - connected components.
+- View independent paths, with limits for large graphs to keep the preview responsive.
+- Receive lightweight suggestions when the graph exceeds the configured complexity threshold.
+- Analyze common Python control-flow structures including `if`/`elif`/`else`, `for`,
+  `while`, `return`, `break`, and `continue`.
 
-## Getting Started
+## Usage
 
-1. `bun create lalunamel/bun-vscode-extension my-extension`
-2. `cd my-extension`
-3. `code .`
-4. Modify `package.json` with your information
-5. Modify `LICENSE.txt` with the current year and your name
-6. Start recording your work in `CHANGELOG.md`
+Open a Python file and run one of the `GUY` commands from the Command Palette.
 
-## How this template works
+| Command | Description |
+| --- | --- |
+| `GUY: Generate CFG from File` | Builds a graph for the active Python file. |
+| `GUY: Generate CFG from Selection` | Builds a graph for the selected Python code. |
+| `GUY: Generate CFG from Current Function` | Builds a graph for the function containing the cursor. |
+| `GUY: Toggle Simplified/Detailed CFG View` | Switches the current graph between simplified and detailed mode. |
 
-### Files and folders
+The file command is also available from the Python editor title bar. Selection and
+current-function commands are available from the Python editor context menu.
 
-- `.vscode` - contains the config for vscode
-  - `launch.json` - contains the config that enables running the extension with `F5`
-  - `tasks.json` - contains the config that defines the default build task, used in `launch.json`
-- `dist` - contains the transpiled source files
-  - `extension.cjs` - the transpiled version of `src/extension.ts`. Uses `cjs` extension to conform to CommonJS (which is required for VSCode extensions)
-- `mocks` - for testing. Contains mocked versions of libraries
-  - `vscode.ts` - the mocked out version of the vscode library. I'm not quite sure what the structure of the normal library is, but I had a hell of a time getting it to work with bun and bun test. I think just the types are published, but the source code isn't, and then when your extension is built and bundled, the actual implementation of all the api calls used in your extension live within vscode itself. Quite complex, quite annoying. I'm sure I'm missing something and there's a better way but :shrug:
-- `scripts`
-  - `build-with-esbuild.ts` - contains the logic to build the app with esbuild. Since esbuild does not use config files like the rest of the bundlers, this is the way to move all of that config into a file somewhere other than `package.json`. In order to get around the annoyances with the `vscode` package not actually existing, the `vscode` package is marked as "external" (and therefore not required to be resolvable).
-  - `esbuild.config.ts` - contains the config for esbuild.
-  - `watch-with-esbuild.ts` - same as the build script, but runs in continuous watch mode.
-- `src` - contains the source files
-  - `extension.ts` - the extension file.
-  - `extension.test.ts` - the test for the extension
+## Webview controls
 
-### Developing
+The CFG preview includes:
 
-The extension is located at `src/extension.ts`.
+- a graph canvas with fit, center, reset zoom, zoom in, and zoom out controls;
+- a collapsible sidebar with nodes, edges, functions, and independent paths;
+- a metrics panel with the cyclomatic complexity formula;
+- source highlighting when graph items are selected;
+- a simplified/detailed mode toggle in the preview header.
 
-The template's `package.json` already has all the options configured to create a "Hello World" extension.
+## Extension settings
 
-### Testing
+This extension contributes the following settings:
 
-Write your tests at `src/extension.test.ts`
+| Setting | Default | Description |
+| --- | --- | --- |
+| `guy.autoOpenPreview` | `true` | Open the CFG preview automatically after generation. |
+| `guy.graphLayout` | `top-bottom` | Default graph layout direction. Supported values: `top-bottom`, `left-right`. |
+| `guy.showMetricsPanel` | `false` | Show the metrics panel in the CFG preview. |
+| `guy.highlightCodeOnNodeClick` | `true` | Highlight source code when nodes or edges are selected. |
+| `guy.maxNodesBeforeWarning` | `100` | Show a visual complexity warning when the graph exceeds this number of nodes. |
+| `guy.highComplexityThreshold` | `10` | Cyclomatic complexity threshold used to show lightweight suggestions. |
 
-The tests there are unit tests, which is to say that all the dependencies of the subject under test are mocked out. They are mocked out by two means:
+## Requirements
 
-1. `spyOn` from bun's testing package
-2. `mocks/vscode.ts`
+- VS Code `^1.120.0`.
+- Python source files (`.py` or `python` language mode).
 
-The first is normal spying/mocking as you'd find in any other test.
+## Development
 
-When writing tests for your extension, you must mock out any aspect of the `vscode` package you're using in `mocks/vscode.ts` so that those aspects are available to your implementation when the test runs.
+Install dependencies:
 
-The second is required because the `vscode` package doesn't actually contain any implementation - only types (see notes on `build-with-esbuild.ts`). The `mocks` folder is hooked up by the `paths.vscode` value in `tsconfig.json` so that when you `import * as vscode from "vscode"`, rather than looking in `node_modules` for `vscode`, the resolver looks in `./mocks/vscode.ts`.
-
-The mocks are only used when running tests and not when building to `./dist`. That is because `vscode` is marked as "external` in the esbuild config.
-
-This second part is required so that when running tests, `import * as vscode from "vscode"` in the implementation file actually returns something (the something it returns is determined by the contents of `./mocks/vscode.ts`).
-
-### Running
-
-To run the extension, simply press `F5` or go to `Run and Debug > Run Extension`. A new VSCode instance will be started and your extension will be loaded in there. You can `console.log` and set breakpoints, too!
-
-Once the VSCode instance has loaded the extension, open the command pallette with `Cmd + Shift + P` and type `hello world` to find the command added by the extension.
-
-### Packaging
-
-Packaging a VSCode extension means turning it all into a single `.vsix` file that can be installed manually by `Right Click > Install extension VSIX` in VSCode.
-
-To package your extension, `bun run package`.
-
-## Differences with the stock Yeoman generator
-
-- This template does not use mocha as described in the [VSCode - Testing Extensions](https://code.visualstudio.com/api/working-with-extensions/testing-extension) docs
-- It also does not use `vscode-test` like the [Yeoman generator](https://code.visualstudio.com/api/get-started/your-first-extension) does
-- It uses `esbuild` rather than webpack
-
-I generally found that the Yeoman template uses older technologies like mocha and webpack that don't play well with newer tooling, and so I did my best to replicate and update the functionality present in the Yeoman generator.
-
-## Possible errors
-
-```
-Activating extension 'undefined_publisher.bun-vscode-extension' failed: require() of ES Module dist/extension.js from /Applications/Visual Studio Code.app/Contents/Resources/app/out/vs/loader.js not supported. extension.js is treated as an ES module file as it is a .js file whose nearest parent package.json contains "type": "module" which declares all .js files in that package scope as ES modules. Instead rename extension.js to end in .cjs, change the requiring code to use dynamic import() which is available in all CommonJS modules, or change "type": "module" to "type": "commonjs" in package.json to treat all .js files as CommonJS (using .mjs for all ES modules instead).
+```sh
+npm install
 ```
 
-This error is produced because VSCode can't load your extension. This is probably happening because the file you're tyring to load is using ESM instead of CommonJS. You can fix this by fiddling with the settings in `build-with-esbuild.ts`.
+Run checks and build the extension:
+
+```sh
+npm run compile
+```
+
+Create a production bundle:
+
+```sh
+npm run package
+```
+
+Run tests:
+
+```sh
+npm test
+```
+
+Useful development scripts:
+
+| Script | Description |
+| --- | --- |
+| `npm run check-types` | Run TypeScript type checking. |
+| `npm run lint` | Run ESLint over `src`. |
+| `npm run watch` | Run TypeScript and esbuild watchers in parallel. |
+| `npm run compile-tests` | Compile test sources. |
+
+## Example files
+
+Example Python inputs are available under `src/examples`:
+
+- `sequential.py`
+- `conditional.py`
+- `functions.py`
+- `loop_break_continue.py`
+- `example_simplified_detailed.py`
+
+## Known limitations
+
+- CFG generation currently targets Python only.
+- Tree-sitter recovery can produce incomplete graphs when the source contains syntax errors.
+- Independent paths are hidden for very large graphs to keep the preview responsive.
