@@ -1,9 +1,9 @@
-# Changelog
+# Change Log
 
-All notable changes to this project will be documented in this file.
+All notable changes to the "guy" extension will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how to structure this file.
 
-# [0.0.1]
+## [Unreleased]
 
-- Created this extension!
+- Initial release
