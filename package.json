@@ -132,8 +132,8 @@
     "test": "vscode-test"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^3.0.0",
     "@xyflow/react": "^12.10.2",
-    "dagre": "^0.8.5",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "tree-sitter": "^0.22.4",
@@ -141,7 +141,6 @@
     "web-tree-sitter": "^0.26.8"
   },
   "devDependencies": {
-    "@types/dagre": "^0.7.54",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.120.0",
