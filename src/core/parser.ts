@@ -154,6 +154,24 @@ export class PythonParser implements LanguageParser<
         nodes.push(...this.nodesFromTreeSitterContainer(child, offset));
         continue;
       }
+      if (child.type === "class_definition") {
+        const block = namedChildren(child).find((item) => item.type === "block");
+        if (block) nodes.push(...this.nodesFromTreeSitterContainer(block, offset));
+        continue;
+      }
+      if (child.type === "decorated_definition") {
+        const definition = namedChildren(child).find((item) =>
+          item.type === "function_definition" || item.type === "class_definition",
+        );
+        if (definition?.type === "class_definition") {
+          const block = namedChildren(definition).find((item) => item.type === "block");
+          if (block) nodes.push(...this.nodesFromTreeSitterContainer(block, offset));
+          continue;
+        }
+        const parsed = definition && this.nodeFromTreeSitter(definition, offset);
+        if (parsed) nodes.push(parsed);
+        continue;
+      }
       const parsed = this.nodeFromTreeSitter(child, offset);
       if (parsed) {
         nodes.push(parsed);
@@ -187,9 +205,10 @@ export class PythonParser implements LanguageParser<
     if (node.type === "for_statement" || node.type === "while_statement") {
       const children = namedChildren(node);
       const block = children.find((child) => child.type === "block");
-      const condition =
-        children.find((child) => child.type !== "block")?.text ??
-        trimHeader(firstLine(node.text));
+      const condition = node.type === "for_statement"
+        ? trimHeader(firstLine(node.text))
+        : children.find((child) => child.type !== "block")?.text ??
+          trimHeader(firstLine(node.text));
       return {
         ...rangeFromTreeSitter(node, offset),
         kind: "loop",

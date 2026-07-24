@@ -138,6 +138,9 @@ class CFGBuildSession {
         highComplexityThreshold,
         suggestions,
         independentPathLimitReason: independentPathResult.limitReason,
+        showMetricsPanel: this.options.showMetricsPanel ?? false,
+        maxNodesBeforeWarning: this.options.maxNodesBeforeWarning ?? 100,
+        graphLayout: this.options.graphLayout ?? "top-bottom",
       },
       sourceMeta,
       functions: parsed.functions.map(toFunctionInfo),
@@ -313,6 +316,7 @@ class CFGBuildSession {
       pendingLabel = "false";
     }
 
+    if (pendingFalseFrom.length === 0 && exits.length === 0) return [];
     const merge = this.addNode("merge", "merge", "", statement);
     this.connect(pendingFalseFrom, merge.id, pendingLabel);
     this.connect(exits, merge.id, "next");

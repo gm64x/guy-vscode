@@ -8,6 +8,8 @@ let currentCfg: CFG | undefined;
 let currentViewMode: CFGViewMode = "simplified";
 let lastFunctionCursor: { line: number; column: number } | undefined;
 let lastSelectionOffset: { line: number; column: number } | undefined;
+let lastSelectionSource: string | undefined;
+let lastSelectionFileName: string | undefined;
 let panel: GuyWebviewPanel;
 let navigator: EditorNavigator;
 
@@ -39,7 +41,9 @@ export function activate(context: vscode.ExtensionContext): void {
       if (navigator.isSelectionFromNavigation()) {
         return;
       }
-      const node = navigator.findNodeAt(currentCfg, event.selections[0].active);
+      const node = currentCfg?.sourceMeta.fileName === event.textEditor.document.fileName
+        ? navigator.findNodeAt(currentCfg, event.selections[0].active)
+        : undefined;
       if (node) {
         panel.highlightNode(node.id);
       }
@@ -65,8 +69,9 @@ async function generateFromFile(builder: CFGBuilder): Promise<void> {
       mode: "file",
       viewMode: currentViewMode,
       highComplexityThreshold: getHighComplexityThreshold(),
+      ...getDisplaySettings(),
     });
-    panel.show(currentCfg);
+    if (getSetting("autoOpenPreview", true)) panel.show(currentCfg);
     showDiagnostics(currentCfg);
   } catch (error) {
     showGenerationError(error);
@@ -89,6 +94,8 @@ async function generateFromSelection(builder: CFGBuilder): Promise<void> {
     line: editor.selection.start.line,
     column: editor.selection.start.character,
   };
+  lastSelectionSource = editor.document.getText(editor.selection);
+  lastSelectionFileName = editor.document.fileName;
 
   try {
     panel.loading();
@@ -99,8 +106,9 @@ async function generateFromSelection(builder: CFGBuilder): Promise<void> {
       viewMode: currentViewMode,
       selectionOffset: lastSelectionOffset,
       highComplexityThreshold: getHighComplexityThreshold(),
+      ...getDisplaySettings(),
     });
-    panel.show(currentCfg);
+    if (getSetting("autoOpenPreview", true)) panel.show(currentCfg);
     showDiagnostics(currentCfg);
   } catch (error) {
     showGenerationError(error);
@@ -127,8 +135,9 @@ async function generateFromCurrentFunction(builder: CFGBuilder): Promise<void> {
       viewMode: currentViewMode,
       cursor: lastFunctionCursor,
       highComplexityThreshold: getHighComplexityThreshold(),
+      ...getDisplaySettings(),
     });
-    panel.show(currentCfg);
+    if (getSetting("autoOpenPreview", true)) panel.show(currentCfg);
     showDiagnostics(currentCfg);
   } catch (error) {
     showGenerationError(error);
@@ -154,28 +163,15 @@ async function toggleDetailMode(builder: CFGBuilder): Promise<void> {
   try {
     panel.loading();
     if (currentCfg.sourceMeta.mode === "selection" && lastSelectionOffset) {
-      const editor = vscode.window.visibleTextEditors.find(
-        (e) => e.document === document,
-      );
-      if (editor && !editor.selection.isEmpty) {
+      if (lastSelectionSource !== undefined) {
         currentCfg = await builder.generate({
-          source: document.getText(editor.selection),
-          fileName: document.fileName,
+          source: lastSelectionSource,
+          fileName: lastSelectionFileName ?? document.fileName,
           mode: "selection",
           viewMode: currentViewMode,
-          selectionOffset: {
-            line: editor.selection.start.line,
-            column: editor.selection.start.character,
-          },
+          selectionOffset: lastSelectionOffset,
           highComplexityThreshold: getHighComplexityThreshold(),
-        });
-      } else {
-        currentCfg = await builder.generate({
-          source: document.getText(),
-          fileName: document.fileName,
-          mode: "file",
-          viewMode: currentViewMode,
-          highComplexityThreshold: getHighComplexityThreshold(),
+          ...getDisplaySettings(),
         });
       }
     } else if (
@@ -189,6 +185,7 @@ async function toggleDetailMode(builder: CFGBuilder): Promise<void> {
         viewMode: currentViewMode,
         cursor: lastFunctionCursor,
         highComplexityThreshold: getHighComplexityThreshold(),
+        ...getDisplaySettings(),
       });
     } else {
       currentCfg = await builder.generate({
@@ -238,8 +235,8 @@ async function generateFunctionByLine(
   builder: CFGBuilder,
   startLine: number,
 ): Promise<void> {
-  let editor = getPythonEditor(false);
-  if (!editor && currentCfg?.sourceMeta.fileName) {
+  let editor: vscode.TextEditor | undefined;
+  if (currentCfg?.sourceMeta.fileName) {
     try {
       const document = await vscode.workspace.openTextDocument(
         vscode.Uri.file(currentCfg.sourceMeta.fileName),
@@ -253,6 +250,7 @@ async function generateFunctionByLine(
       // ignore
     }
   }
+  if (!editor) editor = getPythonEditor(false);
   if (!editor) {
     return;
   }
@@ -315,4 +313,16 @@ function getHighComplexityThreshold(): number {
   return vscode.workspace
     .getConfiguration("guy")
     .get<number>("highComplexityThreshold", 10);
+}
+
+function getSetting<T>(key: string, fallback: T): T {
+  return vscode.workspace.getConfiguration("guy").get<T>(key, fallback);
+}
+
+function getDisplaySettings() {
+  return {
+    showMetricsPanel: getSetting("showMetricsPanel", false),
+    maxNodesBeforeWarning: getSetting("maxNodesBeforeWarning", 100),
+    graphLayout: getSetting<"top-bottom" | "left-right">("graphLayout", "top-bottom"),
+  };
 }

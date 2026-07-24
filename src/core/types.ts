@@ -60,6 +60,9 @@ export interface CFGAnalysis {
   highComplexityThreshold: number;
   suggestions: string[];
   independentPathLimitReason?: string;
+  showMetricsPanel: boolean;
+  maxNodesBeforeWarning: number;
+  graphLayout: "top-bottom" | "left-right";
 }
 
 export interface CFGSourceMeta {
@@ -96,6 +99,9 @@ export interface GenerateCFGOptions {
   selectionOffset?: SourceOffset;
   cursor?: SourcePosition;
   highComplexityThreshold?: number;
+  showMetricsPanel?: boolean;
+  maxNodesBeforeWarning?: number;
+  graphLayout?: "top-bottom" | "left-right";
 }
 
 export interface SourcePosition {

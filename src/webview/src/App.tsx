@@ -67,6 +67,9 @@ type CFG = {
     highComplexityThreshold: number;
     suggestions: string[];
     independentPathLimitReason?: string;
+    showMetricsPanel?: boolean;
+    maxNodesBeforeWarning?: number;
+    graphLayout?: "top-bottom" | "left-right";
   };
   sourceMeta: {
     mode: "file" | "selection" | "function";
@@ -248,6 +251,7 @@ function toFlowGraph(
       minlen: edge.label === "loop" || edge.label === "continue" ? 2 : 1,
     }),
   );
+  g.setGraph({ rankdir: cfg.analysis.graphLayout === "left-right" ? "LR" : "TB" });
   dagre.layout(g);
 
   const laidOutNodes = nodes.map((node) => {
@@ -520,8 +524,8 @@ function App() {
       </main>
 
       <aside aria-hidden={isSidebarCollapsed}>
-        <Metrics cfg={cfg} />
-        {cfg?.analysis.suggestions.length ? <Suggestions cfg={cfg} /> : null}
+        {cfg?.analysis.showMetricsPanel ? <Metrics cfg={cfg} /> : null}
+      {cfg?.analysis.suggestions.length ? <Suggestions cfg={cfg} /> : null}
         {selectedNode ? <NodePreview node={selectedNode} /> : null}
         <div className="tabs-header">
           <TabButton
@@ -673,9 +677,9 @@ function Metrics({ cfg }: { cfg: CFG | null }) {
         E − N + 2P = {cfg.metrics.edgeCount} − {cfg.metrics.nodeCount} + 2×
         {cfg.metrics.connectedComponents}
       </p>
-      {cfg.metrics.nodeCount > 100 ? (
+      {cfg.metrics.nodeCount > (cfg.analysis.maxNodesBeforeWarning ?? 100) ? (
         <p className="warning">
-          Graph exceeds 100 nodes and may be visually dense.
+          Graph exceeds {cfg.analysis.maxNodesBeforeWarning ?? 100} nodes and may be visually dense.
         </p>
       ) : null}
       {cfg.diagnostics.map((d) => (

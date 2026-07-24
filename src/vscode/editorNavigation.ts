@@ -12,6 +12,7 @@ export class EditorNavigator {
   });
 
   async highlightNode(cfg: CFG | undefined, nodeId: string): Promise<void> {
+    if (!cfg || !vscode.workspace.getConfiguration("guy").get("highlightCodeOnNodeClick", true)) return;
     const node = cfg?.nodes.find((item) => item.id === nodeId);
     if (!node) {
       return;
@@ -20,6 +21,7 @@ export class EditorNavigator {
   }
 
   async highlightEdge(cfg: CFG | undefined, edgeId: string): Promise<void> {
+    if (!cfg || !vscode.workspace.getConfiguration("guy").get("highlightCodeOnNodeClick", true)) return;
     const edge = cfg?.edges.find((item) => item.id === edgeId);
     if (!edge) {
       return;
@@ -31,7 +33,7 @@ export class EditorNavigator {
   }
 
   async highlightPath(cfg: CFG | undefined, nodeIds: string[]): Promise<void> {
-    if (!cfg) {
+    if (!cfg || !vscode.workspace.getConfiguration("guy").get("highlightCodeOnNodeClick", true)) {
       return;
     }
     const idSet = new Set(nodeIds);
