@@ -1,35 +1,56 @@
-# Guy
+<div align="center">
 
-Guy is a VS Code extension for visualizing Python control-flow graphs (CFGs).
-It parses Python code, builds an interactive graph, and shows useful control-flow
-metrics such as cyclomatic complexity.
+<img src="media/icons/gfc.svg" alt="GUY logo" width="72" height="72">
 
-**GUY** stands for **Graphing Utility for Your code**.
+# GUY
+
+### Graphing Utility for Your code
+
+Visualize Python control flow directly inside Visual Studio Code.
+
+[![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.120.0-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)](https://code.visualstudio.com/)
+[![GitHub stars](https://img.shields.io/github/stars/gm64x/guy-vscode?style=for-the-badge&logo=github)](https://github.com/gm64x/guy-vscode/stargazers)
+[![License](https://img.shields.io/github/license/gm64x/guy-vscode?style=for-the-badge)](LICENSE.txt)
+
+</div>
+
+GUY parses Python code, builds an interactive control-flow graph (CFG), and connects the graph back to your source code. Use it to understand branching logic, inspect complexity, and explore independent execution paths without leaving VS Code.
 
 ## Features
 
-- Generate a CFG from:
-  - the whole active Python file;
-  - the current editor selection;
-  - the Python function under the cursor.
-- Preview the graph in an interactive webview powered by React Flow.
-- Toggle between simplified and detailed CFG views.
-- Navigate between the graph and source code by selecting nodes, edges, functions,
-  or independent paths.
-- Inspect graph metrics:
-  - `V(G)` cyclomatic complexity;
-  - nodes;
-  - edges;
-  - decisions;
-  - connected components.
-- View independent paths, with limits for large graphs to keep the preview responsive.
-- Receive lightweight suggestions when the graph exceeds the configured complexity threshold.
-- Analyze common Python control-flow structures including `if`/`elif`/`else`, `for`,
-  `while`, `return`, `break`, and `continue`.
+- Generate a CFG from an entire Python file, a selected code range, or the function under the cursor.
+- Explore the graph in an interactive preview with zoom, fit, center, and layout controls.
+- Switch between simplified and detailed graph views.
+- Navigate between graph nodes, edges, functions, independent paths, and source code.
+- Inspect cyclomatic complexity, nodes, edges, decisions, and connected components.
+- Highlight source code when selecting graph items.
+- Get lightweight complexity suggestions and visual warnings for large graphs.
+- Understand common Python constructs including `if`/`elif`/`else`, `for`, `while`, `return`, `break`, and `continue`.
 
-## Usage
+## Quick start
 
-Open a Python file and run one of the `GUY` commands from the Command Palette.
+### Run locally
+
+Clone the repository, install dependencies, and open it in VS Code:
+
+```sh
+git clone https://github.com/gm64x/guy-vscode.git
+cd guy-vscode
+npm install
+npm run compile
+```
+
+Press `F5` in VS Code to launch an Extension Development Host with GUY enabled.
+
+### Generate your first graph
+
+1. Open a Python file.
+2. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+3. Run **GUY: Generate CFG from File**.
+
+For a focused view, select Python code and run **GUY: Generate CFG from Selection**, or place the cursor inside a function and run **GUY: Generate CFG from Current Function**.
+
+## Commands
 
 | Command | Description |
 | --- | --- |
@@ -38,84 +59,59 @@ Open a Python file and run one of the `GUY` commands from the Command Palette.
 | `GUY: Generate CFG from Current Function` | Builds a graph for the function containing the cursor. |
 | `GUY: Toggle Simplified/Detailed CFG View` | Switches the current graph between simplified and detailed mode. |
 
-The file command is also available from the Python editor title bar. Selection and
-current-function commands are available from the Python editor context menu.
+The file command is also available in the Python editor title bar. Selection and current-function commands are available in the Python editor context menu.
 
-## Webview controls
+## Working with the preview
 
-The CFG preview includes:
+The CFG preview provides:
 
-- a graph canvas with fit, center, reset zoom, zoom in, and zoom out controls;
-- a collapsible sidebar with nodes, edges, functions, and independent paths;
+- an interactive graph canvas with pan, zoom, fit, center, and reset controls;
+- a sidebar for nodes, edges, functions, and independent paths;
 - a metrics panel with the cyclomatic complexity formula;
-- source highlighting when graph items are selected;
-- a simplified/detailed mode toggle in the preview header.
+- source navigation and highlighting from graph selections;
+- a simplified/detailed view toggle.
 
-## Extension settings
+## Settings
 
-This extension contributes the following settings:
+Configure GUY through **Settings** or `settings.json`:
 
 | Setting | Default | Description |
-| --- | --- | --- |
+| --- | ---: | --- |
 | `guy.autoOpenPreview` | `true` | Open the CFG preview automatically after generation. |
-| `guy.graphLayout` | `top-bottom` | Default graph layout direction. Supported values: `top-bottom`, `left-right`. |
-| `guy.showMetricsPanel` | `false` | Show the metrics panel in the CFG preview. |
+| `guy.graphLayout` | `top-bottom` | Default graph direction: `top-bottom` or `left-right`. |
+| `guy.showMetricsPanel` | `false` | Show the metrics panel in the preview. |
 | `guy.highlightCodeOnNodeClick` | `true` | Highlight source code when nodes or edges are selected. |
-| `guy.maxNodesBeforeWarning` | `100` | Show a visual complexity warning when the graph exceeds this number of nodes. |
-| `guy.highComplexityThreshold` | `10` | Cyclomatic complexity threshold used to show lightweight suggestions. |
+| `guy.maxNodesBeforeWarning` | `100` | Warn when a graph exceeds this number of nodes. |
+| `guy.highComplexityThreshold` | `10` | Complexity threshold for lightweight suggestions. |
 
 ## Requirements
 
-- VS Code `^1.120.0`.
+- Visual Studio Code `^1.120.0`.
 - Python source files (`.py` or `python` language mode).
 
 ## Development
 
-Install dependencies:
-
 ```sh
 npm install
-```
-
-Run checks and build the extension:
-
-```sh
 npm run compile
+npm test
 ```
 
-Create a production bundle:
+Create a production bundle with:
 
 ```sh
 npm run package
 ```
 
-Run tests:
+Example Python inputs are available in [`src/examples`](src/examples).
 
-```sh
-npm test
-```
+## Limitations
 
-Useful development scripts:
-
-| Script | Description |
-| --- | --- |
-| `npm run check-types` | Run TypeScript type checking. |
-| `npm run lint` | Run ESLint over `src`. |
-| `npm run watch` | Run TypeScript and esbuild watchers in parallel. |
-| `npm run compile-tests` | Compile test sources. |
-
-## Example files
-
-Example Python inputs are available under `src/examples`:
-
-- `sequential.py`
-- `conditional.py`
-- `functions.py`
-- `loop_break_continue.py`
-- `example_simplified_detailed.py`
-
-## Known limitations
-
-- CFG generation currently targets Python only.
-- Tree-sitter recovery can produce incomplete graphs when the source contains syntax errors.
+- CFG generation currently supports Python only.
+- Source with syntax errors may produce incomplete graphs because of parser recovery.
 - Independent paths are hidden for very large graphs to keep the preview responsive.
+
+## Links
+
+- [Report an issue](https://github.com/gm64x/guy-vscode/issues)
+- [Source repository](https://github.com/gm64x/guy-vscode)
