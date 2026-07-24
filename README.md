@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="media/icons/gfc.svg" alt="GUY logo" width="72" height="72">
+
 
 # GUY
 

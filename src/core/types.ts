@@ -14,7 +14,8 @@ export type CFGEdgeLabel =
   | "loop"
   | "break"
   | "continue"
-  | "return";
+  | "return"
+  | "exception";
 
 export type CFGSourceMode = "file" | "selection" | "function";
 export type CFGViewMode = "simplified" | "detailed";

@@ -98,7 +98,7 @@ export class EditorNavigator {
       const document = await vscode.workspace.openTextDocument(vscode.Uri.file(fileName));
       return await vscode.window.showTextDocument(document, vscode.ViewColumn.One, false);
     } catch {
-      return active;
+      return undefined;
     }
   }
 }

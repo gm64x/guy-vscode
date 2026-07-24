@@ -5,7 +5,10 @@ export type PythonStatementKind =
   | "statement"
   | "if"
   | "loop"
+  | "try"
+  | "with"
   | "return"
+  | "raise"
   | "break"
   | "continue"
   | "function";
@@ -15,7 +18,7 @@ export interface PythonBaseStatement extends SourceRange {
 }
 
 export interface PythonStatement extends PythonBaseStatement {
-  kind: "statement" | "return" | "break" | "continue";
+  kind: "statement" | "return" | "raise" | "break" | "continue";
 }
 
 export interface PythonBranch extends SourceRange {
@@ -34,6 +37,25 @@ export interface PythonLoopStatement extends PythonBaseStatement {
   loopKind: "for" | "while";
   condition: string;
   body: PythonAstNode[];
+  elseBody: PythonAstNode[];
+}
+
+export interface PythonExceptBranch extends PythonBaseStatement {
+  catchAll: boolean;
+  body: PythonAstNode[];
+}
+
+export interface PythonTryStatement extends PythonBaseStatement {
+  kind: "try";
+  body: PythonAstNode[];
+  handlers: PythonExceptBranch[];
+  elseBody: PythonAstNode[];
+  finallyBody: PythonAstNode[];
+}
+
+export interface PythonWithStatement extends PythonBaseStatement {
+  kind: "with";
+  body: PythonAstNode[];
 }
 
 export interface PythonFunctionStatement extends PythonBaseStatement {
@@ -46,6 +68,8 @@ export type PythonAstNode =
   | PythonStatement
   | PythonIfStatement
   | PythonLoopStatement
+  | PythonTryStatement
+  | PythonWithStatement
   | PythonFunctionStatement;
 
 export interface ParsedPython {
@@ -156,7 +180,9 @@ export class PythonParser implements LanguageParser<
       }
       if (child.type === "class_definition") {
         const block = namedChildren(child).find((item) => item.type === "block");
-        if (block) nodes.push(...this.nodesFromTreeSitterContainer(block, offset));
+        if (block) {
+          nodes.push(...this.nodesFromTreeSitterContainer(block, offset));
+        }
         continue;
       }
       if (child.type === "decorated_definition") {
@@ -165,11 +191,15 @@ export class PythonParser implements LanguageParser<
         );
         if (definition?.type === "class_definition") {
           const block = namedChildren(definition).find((item) => item.type === "block");
-          if (block) nodes.push(...this.nodesFromTreeSitterContainer(block, offset));
+          if (block) {
+            nodes.push(...this.nodesFromTreeSitterContainer(block, offset));
+          }
           continue;
         }
         const parsed = definition && this.nodeFromTreeSitter(definition, offset);
-        if (parsed) nodes.push(parsed);
+        if (parsed) {
+          nodes.push(parsed);
+        }
         continue;
       }
       const parsed = this.nodeFromTreeSitter(child, offset);
@@ -205,15 +235,70 @@ export class PythonParser implements LanguageParser<
     if (node.type === "for_statement" || node.type === "while_statement") {
       const children = namedChildren(node);
       const block = children.find((child) => child.type === "block");
+      const elseClause = children.find((child) => child.type === "else_clause");
+      const elseBlock = elseClause && namedChildren(elseClause).find(
+        (child) => child.type === "block",
+      );
       const condition = node.type === "for_statement"
         ? trimHeader(firstLine(node.text))
-        : children.find((child) => child.type !== "block")?.text ??
-          trimHeader(firstLine(node.text));
+        : children.find(
+            (child) => child.type !== "block" && child.type !== "else_clause",
+          )?.text ?? trimHeader(firstLine(node.text));
       return {
         ...rangeFromTreeSitter(node, offset),
         kind: "loop",
         loopKind: node.type === "for_statement" ? "for" : "while",
         condition,
+        code: firstLine(node.text),
+        body: block ? this.nodesFromTreeSitterContainer(block, offset) : [],
+        elseBody: elseBlock
+          ? this.nodesFromTreeSitterContainer(elseBlock, offset)
+          : [],
+      };
+    }
+
+    if (node.type === "try_statement") {
+      const children = namedChildren(node);
+      const block = children.find((child) => child.type === "block");
+      const handlers = children
+        .filter((child) => child.type === "except_clause")
+        .map((child) => {
+          const handlerBlock = namedChildren(child).find(
+            (item) => item.type === "block",
+          );
+          return {
+            ...rangeFromTreeSitter(child, offset),
+            code: firstLine(child.text),
+            catchAll: namedChildren(child).every(
+              (item) => item.type === "block",
+            ),
+            body: handlerBlock
+              ? this.nodesFromTreeSitterContainer(handlerBlock, offset)
+              : [],
+          };
+        });
+      const elseBlock = blockFromClause(children, "else_clause");
+      const finallyBlock = blockFromClause(children, "finally_clause");
+      return {
+        ...rangeFromTreeSitter(node, offset),
+        kind: "try",
+        code: "try",
+        body: block ? this.nodesFromTreeSitterContainer(block, offset) : [],
+        handlers,
+        elseBody: elseBlock
+          ? this.nodesFromTreeSitterContainer(elseBlock, offset)
+          : [],
+        finallyBody: finallyBlock
+          ? this.nodesFromTreeSitterContainer(finallyBlock, offset)
+          : [],
+      };
+    }
+
+    if (node.type === "with_statement") {
+      const block = namedChildren(node).find((child) => child.type === "block");
+      return {
+        ...rangeFromTreeSitter(node, offset),
+        kind: "with",
         code: firstLine(node.text),
         body: block ? this.nodesFromTreeSitterContainer(block, offset) : [],
       };
@@ -223,6 +308,13 @@ export class PythonParser implements LanguageParser<
       return {
         ...rangeFromTreeSitter(node, offset),
         kind: "return",
+        code: node.text,
+      };
+    }
+    if (node.type === "raise_statement") {
+      return {
+        ...rangeFromTreeSitter(node, offset),
+        kind: "raise",
         code: node.text,
       };
     }
@@ -330,6 +422,16 @@ export class PythonParser implements LanguageParser<
         }
       } else if (node.kind === "loop") {
         functions.push(...this.collectFunctions(node.body));
+        functions.push(...this.collectFunctions(node.elseBody));
+      } else if (node.kind === "try") {
+        functions.push(...this.collectFunctions(node.body));
+        for (const handler of node.handlers) {
+          functions.push(...this.collectFunctions(handler.body));
+        }
+        functions.push(...this.collectFunctions(node.elseBody));
+        functions.push(...this.collectFunctions(node.finallyBody));
+      } else if (node.kind === "with") {
+        functions.push(...this.collectFunctions(node.body));
       }
     }
     return functions;
@@ -339,8 +441,7 @@ export class PythonParser implements LanguageParser<
 function trimHeader(text: string): string {
   return text
     .replace(/:$/, "")
-    .replace(/^(if|elif|while)\s+/, "")
-    .replace(/^for\s+/, "for ");
+    .replace(/^(if|elif|while|for)\s+/, "");
 }
 
 function extractFunctionName(text: string): string {
@@ -390,6 +491,14 @@ function namedChildren(node: TreeSitterNode): TreeSitterNode[] {
   return children;
 }
 
+function blockFromClause(
+  children: TreeSitterNode[],
+  clauseType: string,
+): TreeSitterNode | undefined {
+  const clause = children.find((child) => child.type === clauseType);
+  return clause && namedChildren(clause).find((child) => child.type === "block");
+}
+
 function rangeFromTreeSitter(
   node: TreeSitterNode,
   offset: SourceOffset,
@@ -421,7 +530,6 @@ function isStatementLike(type: string): boolean {
     type === "import_statement" ||
     type === "import_from_statement" ||
     type === "pass_statement" ||
-    type === "raise_statement" ||
     type === "assert_statement"
   );
 }

@@ -2,8 +2,12 @@
   "name": "guy",
   "displayName": "Guy",
   "description": "Graphing Utility for Your code",
-  "version": "0.0.1",
+  "version": "0.1.1",
   "publisher": "gm64x",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gm64x/guy-vscode.git"
+  },
   "license": "MIT",
   "engines": {
     "vscode": "^1.120.0"
@@ -135,17 +139,18 @@
     "web-tree-sitter": "^0.26.8"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/vscode": "^1.120.0",
-    "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
-    "typescript-eslint": "^8.56.1",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.1",
     "eslint": "^9.39.3",
-    "esbuild": "^0.27.3",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.9.3",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "typescript-eslint": "^8.56.1"
   }
 }

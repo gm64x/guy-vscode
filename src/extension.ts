@@ -194,6 +194,7 @@ async function toggleDetailMode(builder: CFGBuilder): Promise<void> {
         mode: "file",
         viewMode: currentViewMode,
         highComplexityThreshold: getHighComplexityThreshold(),
+        ...getDisplaySettings(),
       });
     }
     panel.postCfg(currentCfg);

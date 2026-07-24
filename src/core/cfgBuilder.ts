@@ -5,6 +5,8 @@ import {
   PythonLoopStatement,
   PythonParser,
   PythonStatement,
+  PythonTryStatement,
+  PythonWithStatement,
 } from "./parser";
 import { calculateMetrics } from "./metrics";
 import { calculateIndependentPaths } from "./paths";
@@ -21,8 +23,21 @@ import {
   SourceRange,
 } from "./types";
 
+interface AbruptTarget {
+  nodeId: string;
+  finallyDepth: number;
+}
+
+const MAX_SOURCE_BYTES = 2_000_000;
+const MAX_GRAPH_NODES = 10_000;
+
 interface BuildContext {
-  loopStack: Array<{ conditionId: string; afterLoopId: string }>;
+  loopStack: Array<{
+    condition: AbruptTarget;
+    afterLoop: AbruptTarget;
+  }>;
+  exceptionTargets: AbruptTarget[];
+  finallyStack: PythonAstNode[][];
 }
 
 export class CFGBuilder {
@@ -40,6 +55,7 @@ class CFGBuildSession {
   private nodeSequence = 0;
   private edgeSequence = 0;
   private exitNodeId = "";
+  private diagnostics: string[] = [];
 
   constructor(
     private parser: PythonParser,
@@ -47,12 +63,17 @@ class CFGBuildSession {
   ) {}
 
   async run(): Promise<CFG> {
+    if (Buffer.byteLength(this.options.source, "utf8") > MAX_SOURCE_BYTES) {
+      throw new Error("The Python source is too large to analyze.");
+    }
+
     const parsed = await this.parser.parse(
       this.options.source,
       this.options.selectionOffset,
     );
     let body = parsed.body;
     let functionName: string | undefined;
+    this.diagnostics = [...parsed.diagnostics];
 
     if (this.options.mode === "function") {
       if (!this.options.cursor) {
@@ -103,11 +124,16 @@ class CFGBuildSession {
       undefined,
       {
         loopStack: [],
+        exceptionTargets: [{ nodeId: exit.id, finallyDepth: 0 }],
+        finallyStack: [],
       },
       this.options.viewMode,
     );
     for (const from of open) {
       this.addEdge(from, exit.id, "next");
+    }
+    if (this.nodes.length > MAX_GRAPH_NODES) {
+      throw new Error("The generated CFG is too large to display.");
     }
 
     const metrics = calculateMetrics(this.nodes, this.edges);
@@ -144,7 +170,7 @@ class CFGBuildSession {
       },
       sourceMeta,
       functions: parsed.functions.map(toFunctionInfo),
-      diagnostics: parsed.diagnostics,
+      diagnostics: this.diagnostics,
     };
   }
 
@@ -200,6 +226,24 @@ class CFGBuildSession {
         viewMode,
       );
     }
+    if (statement.kind === "try") {
+      return this.buildTry(
+        statement,
+        predecessors,
+        firstLabel,
+        context,
+        viewMode,
+      );
+    }
+    if (statement.kind === "with") {
+      return this.buildWith(
+        statement,
+        predecessors,
+        firstLabel,
+        context,
+        viewMode,
+      );
+    }
     if (statement.kind === "function") {
       const node = this.addNode(
         `def ${statement.name}(...)`,
@@ -218,7 +262,33 @@ class CFGBuildSession {
         statement,
       );
       this.connect(predecessors, node.id, firstLabel ?? "next");
-      this.addEdge(node.id, this.exitNodeId, "return");
+      this.routeAbrupt(
+        node.id,
+        { nodeId: this.exitNodeId, finallyDepth: 0 },
+        "return",
+        context,
+        viewMode,
+      );
+      return [];
+    }
+    if (statement.kind === "raise") {
+      const node = this.addNode(
+        labelFor(statement),
+        "statement",
+        statement.code,
+        statement,
+      );
+      this.connect(predecessors, node.id, firstLabel ?? "next");
+      if (
+        context.exceptionTargets.some(
+          (target) => target.nodeId !== this.exitNodeId,
+        )
+      ) {
+        this.addTypeAgnosticRaiseDiagnostic();
+      }
+      for (const target of context.exceptionTargets) {
+        this.routeAbrupt(node.id, target, "exception", context, viewMode);
+      }
       return [];
     }
     if (statement.kind === "break") {
@@ -231,7 +301,13 @@ class CFGBuildSession {
       this.connect(predecessors, node.id, firstLabel ?? "next");
       const loop = context.loopStack[context.loopStack.length - 1];
       if (loop) {
-        this.addEdge(node.id, loop.afterLoopId, "break");
+        this.routeAbrupt(
+          node.id,
+          loop.afterLoop,
+          "break",
+          context,
+          viewMode,
+        );
       }
       return [];
     }
@@ -245,7 +321,13 @@ class CFGBuildSession {
       this.connect(predecessors, node.id, firstLabel ?? "next");
       const loop = context.loopStack[context.loopStack.length - 1];
       if (loop) {
-        this.addEdge(node.id, loop.conditionId, "continue");
+        this.routeAbrupt(
+          node.id,
+          loop.condition,
+          "continue",
+          context,
+          viewMode,
+        );
       }
       return [];
     }
@@ -316,11 +398,120 @@ class CFGBuildSession {
       pendingLabel = "false";
     }
 
-    if (pendingFalseFrom.length === 0 && exits.length === 0) return [];
+    if (pendingFalseFrom.length === 0 && exits.length === 0) {
+      return [];
+    }
     const merge = this.addNode("merge", "merge", "", statement);
     this.connect(pendingFalseFrom, merge.id, pendingLabel);
     this.connect(exits, merge.id, "next");
     return [merge.id];
+  }
+
+  private buildTry(
+    statement: PythonTryStatement,
+    predecessors: string[],
+    firstLabel: CFGEdgeLabel | undefined,
+    context: BuildContext,
+    viewMode: CFGViewMode,
+  ): string[] {
+    const tryNode = this.addNode("try", "statement", statement.code, statement);
+    this.connect(predecessors, tryNode.id, firstLabel ?? "next");
+    const handlers = statement.handlers.map((handler) => ({
+      statement: handler,
+      node: this.addNode(handler.code, "statement", handler.code, handler),
+    }));
+
+    const protectedFinallyStack = statement.finallyBody.length > 0
+      ? [...context.finallyStack, statement.finallyBody]
+      : context.finallyStack;
+    const possibleHandlers: AbruptTarget[] = [];
+    let hasCatchAll = false;
+    for (const handler of handlers) {
+      if (hasCatchAll) {
+        continue;
+      }
+      possibleHandlers.push({
+        nodeId: handler.node.id,
+        finallyDepth: protectedFinallyStack.length,
+      });
+      hasCatchAll = handler.statement.catchAll;
+    }
+    const tryContext: BuildContext = {
+      ...context,
+      exceptionTargets: hasCatchAll
+        ? possibleHandlers
+        : [...possibleHandlers, ...context.exceptionTargets],
+      finallyStack: protectedFinallyStack,
+    };
+    const continuationContext: BuildContext = {
+      ...context,
+      finallyStack: protectedFinallyStack,
+    };
+    const bodyExits = this.buildSequence(
+      statement.body,
+      [tryNode.id],
+      "next",
+      tryContext,
+      viewMode,
+    );
+    const normalExits = statement.elseBody.length > 0
+      ? this.buildSequence(
+          statement.elseBody,
+          bodyExits,
+          "next",
+          continuationContext,
+          viewMode,
+        )
+      : bodyExits;
+    const handlerExits = handlers.flatMap((handler) =>
+      this.buildSequence(
+        handler.statement.body,
+        [handler.node.id],
+        "next",
+        continuationContext,
+        viewMode,
+      ),
+    );
+    const exits = [...normalExits, ...handlerExits];
+    const finalExits = statement.finallyBody.length > 0
+      ? this.buildSequence(
+          statement.finallyBody,
+          exits,
+          "next",
+          context,
+          viewMode,
+        )
+      : exits;
+
+    if (finalExits.length === 0) {
+      return [];
+    }
+    const merge = this.addNode("merge", "merge", "", statement);
+    this.connect(finalExits, merge.id, "next");
+    return [merge.id];
+  }
+
+  private buildWith(
+    statement: PythonWithStatement,
+    predecessors: string[],
+    firstLabel: CFGEdgeLabel | undefined,
+    context: BuildContext,
+    viewMode: CFGViewMode,
+  ): string[] {
+    const withNode = this.addNode(
+      statement.code,
+      "statement",
+      statement.code,
+      statement,
+    );
+    this.connect(predecessors, withNode.id, firstLabel ?? "next");
+    return this.buildSequence(
+      statement.body,
+      [withNode.id],
+      "next",
+      context,
+      viewMode,
+    );
   }
 
   private buildLoop(
@@ -340,9 +531,19 @@ class CFGBuildSession {
     this.connect(predecessors, condition.id, firstLabel ?? "next");
 
     const loopContext: BuildContext = {
+      ...context,
       loopStack: [
         ...context.loopStack,
-        { conditionId: condition.id, afterLoopId: afterLoop.id },
+        {
+          condition: {
+            nodeId: condition.id,
+            finallyDepth: context.finallyStack.length,
+          },
+          afterLoop: {
+            nodeId: afterLoop.id,
+            finallyDepth: context.finallyStack.length,
+          },
+        },
       ],
     };
     const bodyExits = this.buildSequence(
@@ -353,8 +554,57 @@ class CFGBuildSession {
       viewMode,
     );
     this.connect(bodyExits, condition.id, "loop");
-    this.addEdge(condition.id, afterLoop.id, "false");
+    if (statement.elseBody.length > 0) {
+      const elseExits = this.buildSequence(
+        statement.elseBody,
+        [condition.id],
+        "false",
+        context,
+        viewMode,
+      );
+      this.connect(elseExits, afterLoop.id, "next");
+    } else {
+      this.addEdge(condition.id, afterLoop.id, "false");
+    }
     return [afterLoop.id];
+  }
+
+  private routeAbrupt(
+    fromId: string,
+    target: AbruptTarget,
+    label: CFGEdgeLabel,
+    context: BuildContext,
+    viewMode: CFGViewMode,
+  ): void {
+    let open = [fromId];
+    for (
+      let index = context.finallyStack.length - 1;
+      index >= target.finallyDepth && open.length > 0;
+      index--
+    ) {
+      open = this.buildSequence(
+        context.finallyStack[index],
+        open,
+        "next",
+        {
+          ...context,
+          exceptionTargets: context.exceptionTargets.filter(
+            (exceptionTarget) => exceptionTarget.finallyDepth <= index,
+          ),
+          finallyStack: context.finallyStack.slice(0, index),
+        },
+        viewMode,
+      );
+    }
+    this.connect(open, target.nodeId, label);
+  }
+
+  private addTypeAgnosticRaiseDiagnostic(): void {
+    const diagnostic =
+      "Raise matching is type-agnostic; exception edges show possible handlers and an unhandled path.";
+    if (!this.diagnostics.includes(diagnostic)) {
+      this.diagnostics.push(diagnostic);
+    }
   }
 
   private connect(fromIds: string[], toId: string, label?: CFGEdgeLabel): void {
