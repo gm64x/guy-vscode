@@ -18,12 +18,6 @@
     "onCommand:guy.generateCfgFromFile",
     "onCommand:guy.generateCfgFromSelection",
     "onCommand:guy.generateCfgFromCurrentFunction",
-    "onCommand:guy.exportCfgAsMermaid",
-    "onCommand:guy.exportCfgAsDot",
-    "onCommand:guy.exportCfgAsAscii",
-    "onCommand:guy.copyCfgJson",
-    "onCommand:guy.exportCfgAsSvg",
-    "onCommand:guy.exportCfgAsPng",
     "onCommand:guy.toggleGraphDetailMode"
   ],
   "main": "./dist/extension.js",

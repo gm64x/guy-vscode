@@ -22,6 +22,7 @@ export function calculateIndependentPaths(
   }
 
   const wanted = Math.max(1, Math.min(targetCount, 20));
+  const capped = targetCount > 20;
   const outgoing = new Map<string, CFGEdge[]>();
   for (const edge of edges) {
     const list = outgoing.get(edge.from) ?? [];
@@ -49,7 +50,9 @@ export function calculateIndependentPaths(
 
     if (current.nodeId === exitNodeId) {
       const signature = current.edgeIds.join(">");
-      if (!seenSignatures.has(signature)) {
+      const usedBySelected = new Set(complete.flatMap((path) => path.edgeIds));
+      const contributesNewEdge = current.edgeIds.some((edgeId) => !usedBySelected.has(edgeId));
+      if (!seenSignatures.has(signature) && (complete.length === 0 || contributesNewEdge)) {
         seenSignatures.add(signature);
         complete.push({
           id: `p${complete.length + 1}`,
@@ -85,8 +88,9 @@ export function calculateIndependentPaths(
 
   return {
     paths: complete,
-    limitReason:
-      complete.length < wanted
+    limitReason: capped
+      ? `Showing the first ${wanted} independent path(s); the calculated target was ${targetCount}.`
+      : complete.length < wanted
         ? `Only ${complete.length} independent path(s) could be listed for this graph.`
         : undefined
   };
