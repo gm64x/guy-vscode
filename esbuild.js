@@ -1,4 +1,6 @@
 const esbuild = require("esbuild");
+const fs = require("node:fs/promises");
+const path = require("node:path");
 
 const production = process.argv.includes("--production");
 const watch = process.argv.includes("--watch");
@@ -25,7 +27,48 @@ const esbuildProblemMatcherPlugin = {
   },
 };
 
+async function copyTreeSitterAssets() {
+  const runtimeWasmPath = require.resolve(
+    "web-tree-sitter/web-tree-sitter.wasm",
+  );
+  const pythonPackagePath = require.resolve("tree-sitter-python/package.json");
+  const pythonPackageDirectory = path.dirname(pythonPackagePath);
+
+  const runtimeOutputDirectory = path.join(
+    "dist",
+    "node_modules",
+    "web-tree-sitter",
+  );
+  const pythonOutputDirectory = path.join(
+    "dist",
+    "node_modules",
+    "tree-sitter-python",
+  );
+
+  await Promise.all([
+    fs.mkdir(runtimeOutputDirectory, { recursive: true }),
+    fs.mkdir(pythonOutputDirectory, { recursive: true }),
+  ]);
+
+  await Promise.all([
+    fs.copyFile(
+      runtimeWasmPath,
+      path.join(runtimeOutputDirectory, "web-tree-sitter.wasm"),
+    ),
+    fs.copyFile(
+      pythonPackagePath,
+      path.join(pythonOutputDirectory, "package.json"),
+    ),
+    fs.copyFile(
+      path.join(pythonPackageDirectory, "tree-sitter-python.wasm"),
+      path.join(pythonOutputDirectory, "tree-sitter-python.wasm"),
+    ),
+  ]);
+}
+
 async function main() {
+  await copyTreeSitterAssets();
+
   const contexts = await Promise.all([
     esbuild.context({
       entryPoints: ["src/extension.ts"],
