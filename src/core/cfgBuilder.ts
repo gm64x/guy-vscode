@@ -164,7 +164,7 @@ class CFGBuildSession {
         highComplexityThreshold,
         suggestions,
         independentPathLimitReason: independentPathResult.limitReason,
-        showMetricsPanel: this.options.showMetricsPanel ?? false,
+        showMetricsPanel: this.options.showMetricsPanel ?? true,
         maxNodesBeforeWarning: this.options.maxNodesBeforeWarning ?? 100,
         graphLayout: this.options.graphLayout ?? "top-bottom",
       },

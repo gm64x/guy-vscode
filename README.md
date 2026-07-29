@@ -79,7 +79,7 @@ Configure GUY through **Settings** or `settings.json`:
 | --- | ---: | --- |
 | `guy.autoOpenPreview` | `true` | Open the CFG preview automatically after generation. |
 | `guy.graphLayout` | `top-bottom` | Default graph direction: `top-bottom` or `left-right`. |
-| `guy.showMetricsPanel` | `false` | Show the metrics panel in the preview. |
+| `guy.showMetricsPanel` | `true` | Show the metrics panel in the preview. |
 | `guy.highlightCodeOnNodeClick` | `true` | Highlight source code when nodes or edges are selected. |
 | `guy.maxNodesBeforeWarning` | `100` | Warn when a graph exceeds this number of nodes. |
 | `guy.highComplexityThreshold` | `10` | Complexity threshold for lightweight suggestions. |

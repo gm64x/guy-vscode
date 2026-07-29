@@ -1,5 +1,7 @@
 .vscode/**
 .vscode-test/**
+.learnings/**
+.agents/**
 .github/**
 out/**
 node_modules/**

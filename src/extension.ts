@@ -322,7 +322,7 @@ function getSetting<T>(key: string, fallback: T): T {
 
 function getDisplaySettings() {
   return {
-    showMetricsPanel: getSetting("showMetricsPanel", false),
+    showMetricsPanel: getSetting("showMetricsPanel", true),
     maxNodesBeforeWarning: getSetting("maxNodesBeforeWarning", 100),
     graphLayout: getSetting<"top-bottom" | "left-right">("graphLayout", "top-bottom"),
   };

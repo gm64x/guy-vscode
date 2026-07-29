@@ -2,7 +2,7 @@
   "name": "guy",
   "displayName": "Guy",
   "description": "Graphing Utility for Your code",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "gm64x",
   "repository": {
     "type": "git",
@@ -92,7 +92,7 @@
         },
         "guy.showMetricsPanel": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Show the metrics panel in the CFG preview."
         },
         "guy.highlightCodeOnNodeClick": {
