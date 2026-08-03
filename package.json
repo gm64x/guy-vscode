@@ -1,156 +1,159 @@
 {
-  "name": "guy",
-  "displayName": "Guy",
-  "description": "Graphing Utility for Your code",
-  "version": "0.1.2",
-  "publisher": "gm64x",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/gm64x/guy-vscode.git"
-  },
-  "license": "MIT",
-  "engines": {
-    "vscode": "^1.120.0"
-  },
-  "categories": [
-    "Visualization",
-    "Education",
-    "Other"
-  ],
-  "activationEvents": [
-    "onLanguage:python",
-    "onCommand:guy.generateCfgFromFile",
-    "onCommand:guy.generateCfgFromSelection",
-    "onCommand:guy.generateCfgFromCurrentFunction",
-    "onCommand:guy.toggleGraphDetailMode"
-  ],
-  "main": "./dist/extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "guy.generateCfgFromFile",
-        "title": "Generate CFG from File",
-        "category": "GUY",
-        "icon": {
-          "light": "media/icons/git-branch-light.svg",
-          "dark": "media/icons/git-branch-dark.svg"
-        }
-      },
-      {
-        "command": "guy.generateCfgFromSelection",
-        "title": "Generate CFG from Selection",
-        "category": "GUY"
-      },
-      {
-        "command": "guy.generateCfgFromCurrentFunction",
-        "title": "Generate CFG from Current Function",
-        "category": "GUY"
-      },
-      {
-        "command": "guy.toggleGraphDetailMode",
-        "title": "Toggle Simplified/Detailed CFG View",
-        "category": "GUY"
-      }
-    ],
-    "menus": {
-      "editor/title": [
-        {
-          "command": "guy.generateCfgFromFile",
-          "when": "resourceLangId == python",
-          "group": "navigation"
-        }
-      ],
-      "editor/context": [
-        {
-          "command": "guy.generateCfgFromSelection",
-          "when": "resourceLangId == python && editorHasSelection",
-          "group": "navigation"
-        },
-        {
-          "command": "guy.generateCfgFromCurrentFunction",
-          "when": "resourceLangId == python",
-          "group": "navigation"
-        }
-      ]
+    "name": "guy",
+    "displayName": "Guy",
+    "description": "Graphing Utility for Your code",
+    "version": "0.1.2",
+    "publisher": "gm64x",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/gm64x/guy-vscode.git"
     },
-    "configuration": {
-      "title": "GUY",
-      "properties": {
-        "guy.autoOpenPreview": {
-          "type": "boolean",
-          "default": true,
-          "description": "Open the CFG preview automatically after generation."
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.120.0"
+    },
+    "categories": [
+        "Visualization",
+        "Education",
+        "Other"
+    ],
+    "activationEvents": [
+        "onLanguage:python",
+        "onCommand:guy.generateCfgFromFile",
+        "onCommand:guy.generateCfgFromSelection",
+        "onCommand:guy.generateCfgFromCurrentFunction",
+        "onCommand:guy.toggleGraphDetailMode"
+    ],
+    "main": "./dist/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "guy.generateCfgFromFile",
+                "title": "Generate CFG from File",
+                "category": "GUY",
+                "icon": {
+                    "light": "media/icons/git-branch-light.svg",
+                    "dark": "media/icons/git-branch-dark.svg"
+                }
+            },
+            {
+                "command": "guy.generateCfgFromSelection",
+                "title": "Generate CFG from Selection",
+                "category": "GUY"
+            },
+            {
+                "command": "guy.generateCfgFromCurrentFunction",
+                "title": "Generate CFG from Current Function",
+                "category": "GUY"
+            },
+            {
+                "command": "guy.toggleGraphDetailMode",
+                "title": "Toggle Simplified/Detailed CFG View",
+                "category": "GUY"
+            }
+        ],
+        "menus": {
+            "editor/title": [
+                {
+                    "command": "guy.generateCfgFromFile",
+                    "when": "resourceLangId == python",
+                    "group": "navigation"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "guy.generateCfgFromSelection",
+                    "when": "resourceLangId == python && editorHasSelection",
+                    "group": "navigation"
+                },
+                {
+                    "command": "guy.generateCfgFromCurrentFunction",
+                    "when": "resourceLangId == python",
+                    "group": "navigation"
+                }
+            ]
         },
-        "guy.graphLayout": {
-          "type": "string",
-          "default": "top-bottom",
-          "enum": [
-            "top-bottom",
-            "left-right"
-          ],
-          "description": "Default graph layout direction."
-        },
-        "guy.showMetricsPanel": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show the metrics panel in the CFG preview."
-        },
-        "guy.highlightCodeOnNodeClick": {
-          "type": "boolean",
-          "default": true,
-          "description": "Highlight source code when nodes or edges are selected."
-        },
-        "guy.maxNodesBeforeWarning": {
-          "type": "number",
-          "default": 100,
-          "minimum": 10,
-          "description": "Show a visual complexity warning when the graph exceeds this number of nodes."
-        },
-        "guy.highComplexityThreshold": {
-          "type": "number",
-          "default": 10,
-          "minimum": 1,
-          "description": "Cyclomatic complexity threshold used to show lightweight suggestions."
+        "configuration": {
+            "title": "GUY",
+            "properties": {
+                "guy.autoOpenPreview": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Open the CFG preview automatically after generation."
+                },
+                "guy.graphLayout": {
+                    "type": "string",
+                    "default": "top-bottom",
+                    "enum": [
+                        "top-bottom",
+                        "left-right"
+                    ],
+                    "description": "Default graph layout direction."
+                },
+                "guy.showMetricsPanel": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Show the metrics panel in the CFG preview."
+                },
+                "guy.highlightCodeOnNodeClick": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Highlight source code when nodes or edges are selected."
+                },
+                "guy.maxNodesBeforeWarning": {
+                    "type": "number",
+                    "default": 100,
+                    "minimum": 10,
+                    "description": "Show a visual complexity warning when the graph exceeds this number of nodes."
+                },
+                "guy.highComplexityThreshold": {
+                    "type": "number",
+                    "default": 10,
+                    "minimum": 1,
+                    "description": "Cyclomatic complexity threshold used to show lightweight suggestions."
+                }
+            }
         }
-      }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run package",
+        "compile": "npm run check-types && npm run lint && node esbuild.js",
+        "watch": "npm-run-all -p watch:*",
+        "watch:esbuild": "node esbuild.js --watch",
+        "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+        "package": "npm run check-types && npm run lint && node esbuild.js --production",
+        "compile-tests": "tsc -p . --outDir out",
+        "watch-tests": "tsc -p . -w --outDir out",
+        "pretest": "npm run compile-tests && npm run compile && npm run lint",
+        "check-types": "tsc --noEmit",
+        "lint": "eslint src",
+        "test": "vscode-test",
+        "setup:vscode": "./scripts/install-vscode-libs.sh",
+        "vscode:dev": "./.vscode-test/vscode-linux-x64-1.131.0/code --extensionDevelopmentPath=\"$PWD\" --user-data-dir=\"$PWD/.vscode-test/user-data-dev\" --extensions-dir=\"$PWD/.vscode-test/extensions-dev\" \"$PWD\"",
+        "vscode:dev:gpu-off": "./.vscode-test/vscode-linux-x64-1.131.0/code --disable-gpu --extensionDevelopmentPath=\"$PWD\" --user-data-dir=\"$PWD/.vscode-test/user-data-dev\" --extensions-dir=\"$PWD/.vscode-test/extensions-dev\" \"$PWD\""
+    },
+    "dependencies": {
+        "@dagrejs/dagre": "^3.0.0",
+        "@xyflow/react": "^12.10.2",
+        "react": "^19.2.6",
+        "react-dom": "^19.2.6",
+        "tree-sitter": "^0.22.4",
+        "tree-sitter-python": "^0.23.6",
+        "web-tree-sitter": "^0.26.8"
+    },
+    "devDependencies": {
+        "@types/mocha": "^10.0.10",
+        "@types/node": "22.x",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
+        "@types/vscode": "^1.120.0",
+        "@vscode/test-cli": "^0.0.15",
+        "@vscode/test-electron": "^3.1.0",
+        "@vscode/vsce": "^3.9.2",
+        "esbuild": "^0.28.1",
+        "eslint": "^9.39.3",
+        "npm-run-all": "^4.1.5",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.56.1"
     }
-  },
-  "scripts": {
-    "vscode:prepublish": "npm run package",
-    "compile": "npm run check-types && npm run lint && node esbuild.js",
-    "watch": "npm-run-all -p watch:*",
-    "watch:esbuild": "node esbuild.js --watch",
-    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "npm run check-types && npm run lint && node esbuild.js --production",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
-    "check-types": "tsc --noEmit",
-    "lint": "eslint src",
-    "test": "vscode-test"
-  },
-  "dependencies": {
-    "@dagrejs/dagre": "^3.0.0",
-    "@xyflow/react": "^12.10.2",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "tree-sitter": "^0.22.4",
-    "tree-sitter-python": "^0.23.6",
-    "web-tree-sitter": "^0.26.8"
-  },
-  "devDependencies": {
-    "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@types/vscode": "^1.120.0",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^3.9.2",
-    "esbuild": "^0.28.1",
-    "eslint": "^9.39.3",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.1"
-  }
 }
