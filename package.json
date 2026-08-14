@@ -4,9 +4,24 @@
     "description": "Graphing Utility for Your code",
     "version": "0.1.2",
     "publisher": "gm64x",
+    "keywords": [
+        "control flow",
+        "control flow graph",
+        "cfg",
+        "code visualization",
+        "tree-sitter"
+    ],
+    "homepage": "https://github.com/gm64x/guy-vscode#readme",
+    "bugs": {
+        "url": "https://github.com/gm64x/guy-vscode/issues"
+    },
     "repository": {
         "type": "git",
         "url": "https://github.com/gm64x/guy-vscode.git"
+    },
+    "galleryBanner": {
+        "color": "#0f172a",
+        "theme": "dark"
     },
     "license": "MIT",
     "engines": {
