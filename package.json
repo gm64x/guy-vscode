@@ -2,7 +2,7 @@
     "name": "guy",
     "displayName": "GUY - Control Flow Graphs",
     "description": "Visualize interactive control-flow graphs for Python, Java, PHP, C, Go, and Rust.",
-    "version": "0.1.6",
+    "version": "0.1.7",
     "publisher": "gm64x",
     "icon": "media/icon.png",
     "pricing": "Free",

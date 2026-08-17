@@ -410,7 +410,9 @@ function App() {
                 onClick={() => vscode?.postMessage({ type: "TOGGLE_SOURCE_LOCK" })}
               >
                 <Icon name={previewState.sourceLocked ? "lock" : "unlock"} size={12} />
-                {previewState.sourceLocked ? "File Locked" : "Follow Editor"}
+                <span className="control-label">
+                  {previewState.sourceLocked ? "File Locked" : "Follow Editor"}
+                </span>
               </button>
               <button
                 className={`preview-toggle${previewState.updatesPaused ? " active" : ""}`}
@@ -422,7 +424,9 @@ function App() {
                 onClick={() => vscode?.postMessage({ type: "TOGGLE_LIVE_UPDATES" })}
               >
                 <Icon name={previewState.updatesPaused ? "play" : "pause"} size={12} />
-                {previewState.updatesPaused ? "Version Pinned" : "Live Updates"}
+                <span className="control-label">
+                  {previewState.updatesPaused ? "Version Pinned" : "Live Updates"}
+                </span>
               </button>
               <button
                 className="view-toggle"
@@ -434,7 +438,9 @@ function App() {
                   name={viewMode === "simplified" ? "eye" : "eyeOff"}
                   size={12}
                 />
-                {viewMode === "simplified" ? "Simplified" : "Detailed"}
+                <span className="control-label">
+                  {viewMode === "simplified" ? "Simplified" : "Detailed"}
+                </span>
               </button>
             </>
           ) : null}
@@ -498,14 +504,33 @@ function App() {
             )}
           </div>
         )}
+        <div className="toolbar">
+          <div className="tool-group">
+            <IconButton title="Fit View" onClick={fitView}>
+              <Icon name="maximize" />
+            </IconButton>
+            <IconButton title="Reset Zoom" onClick={resetZoom}>
+              <Icon name="rotateCcw" />
+            </IconButton>
+            <IconButton title="Center" onClick={centerGraph}>
+              <Icon name="focus" />
+            </IconButton>
+            <IconButton title="Zoom In" onClick={zoomIn}>
+              <Icon name="zoomIn" />
+            </IconButton>
+            <IconButton title="Zoom Out" onClick={zoomOut}>
+              <Icon name="zoomOut" />
+            </IconButton>
+          </div>
+        </div>
       </main>
 
       <aside aria-hidden={isSidebarCollapsed}>
-        {cfg?.unsupportedSyntax.length ? <UnsupportedWarnings cfg={cfg} /> : null}
-        {cfg?.analysis.showMetricsPanel ? <Metrics cfg={cfg} /> : null}
-      {cfg?.analysis.suggestions.length ? <Suggestions cfg={cfg} /> : null}
-        {selectedNode ? <NodePreview node={selectedNode} /> : null}
-        <div className="tabs-header">
+        <div className="sidebar-heading">
+          <span>Graph inspector</span>
+          {cfg ? <small title={describeSource(cfg)}>{describeSource(cfg)}</small> : null}
+        </div>
+        <div className="tabs-header" role="tablist" aria-label="Graph details">
           <TabButton
             id="nodes"
             label="Nodes"
@@ -531,14 +556,20 @@ function App() {
             onClick={setActiveTab}
           />
         </div>
-        <div className={`tab-panel ${activeTab === "nodes" ? "active" : ""}`}>
+        <div
+          className={`tab-panel ${activeTab === "nodes" ? "active" : ""}`}
+          role="tabpanel"
+        >
           <NodeList
             cfg={cfg}
             selectedNodeId={selectedNodeId}
             onSelect={selectNode}
           />
         </div>
-        <div className={`tab-panel ${activeTab === "edges" ? "active" : ""}`}>
+        <div
+          className={`tab-panel ${activeTab === "edges" ? "active" : ""}`}
+          role="tabpanel"
+        >
           <EdgeList
             cfg={cfg}
             selectedEdgeId={selectedEdgeId}
@@ -547,37 +578,25 @@ function App() {
         </div>
         <div
           className={`tab-panel ${activeTab === "functions" ? "active" : ""}`}
+          role="tabpanel"
         >
           <Functions cfg={cfg} />
         </div>
-        <div className={`tab-panel ${activeTab === "paths" ? "active" : ""}`}>
+        <div
+          className={`tab-panel ${activeTab === "paths" ? "active" : ""}`}
+          role="tabpanel"
+        >
           <Paths
             cfg={cfg}
             selectedPathId={selectedPathId}
             onSelect={selectPath}
           />
         </div>
+        {selectedNode ? <NodePreview node={selectedNode} /> : null}
+        {cfg?.analysis.showMetricsPanel ? <Metrics cfg={cfg} /> : null}
+        {cfg?.analysis.suggestions.length ? <Suggestions cfg={cfg} /> : null}
+        {cfg?.unsupportedSyntax.length ? <UnsupportedWarnings cfg={cfg} /> : null}
       </aside>
-
-      <div className="toolbar">
-        <div className="tool-group">
-          <IconButton title="Fit View" onClick={fitView}>
-            <Icon name="maximize" />
-          </IconButton>
-          <IconButton title="Reset Zoom" onClick={resetZoom}>
-            <Icon name="rotateCcw" />
-          </IconButton>
-          <IconButton title="Center" onClick={centerGraph}>
-            <Icon name="focus" />
-          </IconButton>
-          <IconButton title="Zoom In" onClick={zoomIn}>
-            <Icon name="zoomIn" />
-          </IconButton>
-          <IconButton title="Zoom Out" onClick={zoomOut}>
-            <Icon name="zoomOut" />
-          </IconButton>
-        </div>
-      </div>
     </div>
   );
 }
@@ -600,6 +619,8 @@ function TabButton({
       className={`tab-btn ${active === id ? "active" : ""}`}
       onClick={() => onClick(id)}
       title={label}
+      role="tab"
+      aria-selected={active === id}
     >
       {label}
     </button>
@@ -632,23 +653,33 @@ function UnsupportedWarnings({ cfg }: { cfg: CFG }) {
   const visible = cfg.unsupportedSyntax.slice(0, 8);
   const remaining = cfg.unsupportedSyntax.length - visible.length;
   return (
-    <section className="unsupported-warning">
-      <h2>Unsupported syntax</h2>
-      <p>
-        These constructs are preserved as statements, but their control-flow
-        semantics are not modeled yet.
-      </p>
-      <ul>
-        {visible.map((item) => (
-          <li key={`${item.nodeType}:${item.startLine}:${item.startColumn}`}>
-            <strong>{item.description}</strong>
-            <span>Line {item.startLine + 1}</span>
-            <code title={item.code}>{item.code}</code>
-          </li>
-        ))}
-      </ul>
-      {remaining > 0 ? <p>And {remaining} more.</p> : null}
-    </section>
+    <details className="unsupported-warning">
+      <summary>
+        <span className="warning-icon"><Icon name="alertTriangle" size={14} /></span>
+        <span>
+          <strong>Unsupported syntax</strong>
+          <small>{cfg.unsupportedSyntax.length} constructs need attention</small>
+        </span>
+        <span className="warning-count">{cfg.unsupportedSyntax.length}</span>
+      </summary>
+      <div className="unsupported-content">
+        <p>
+          Preserved as statements; control-flow semantics are not modeled yet.
+        </p>
+        <ul>
+          {visible.map((item) => (
+            <li key={`${item.nodeType}:${item.startLine}:${item.startColumn}`}>
+              <span className="unsupported-meta">
+                <strong>{item.description}</strong>
+                <span>Line {item.startLine + 1}</span>
+              </span>
+              <code title={item.code}>{item.code}</code>
+            </li>
+          ))}
+        </ul>
+        {remaining > 0 ? <p>And {remaining} more.</p> : null}
+      </div>
+    </details>
   );
 }
 
