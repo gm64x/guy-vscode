@@ -17,6 +17,10 @@ const genericAdapter = createGenericAdapter("c", () => "tree-sitter-c/tree-sitte
 
 export const cAdapter: LanguageAdapter = {
   language: "c",
+  unsupportedSyntax: {
+    goto_statement: "goto statement",
+    labeled_statement: "labeled control flow",
+  },
   wasmFileForSource: genericAdapter.wasmFileForSource,
   parseRoot: (root, context) => parseContainer(root, context),
 };
@@ -206,4 +210,3 @@ function findIdentifier(node: TreeSitterNode): TreeSitterNode | undefined {
   }
   return undefined;
 }
-

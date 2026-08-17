@@ -638,6 +638,42 @@ aside::-webkit-scrollbar-thumb,
     font-size: 11px;
 }
 
+.unsupported-warning {
+    border-left: 3px solid var(--warning);
+    background: color-mix(in srgb, var(--warning) 6%, transparent);
+}
+
+.unsupported-warning p {
+    color: var(--muted);
+    font-size: 11px;
+}
+
+.unsupported-warning ul {
+    display: grid;
+    gap: 7px;
+    margin-top: 8px;
+    list-style: none;
+}
+
+.unsupported-warning li {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.unsupported-warning li span {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.unsupported-warning code {
+    overflow: hidden;
+    color: var(--fg);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .path-arrow {
     margin: 0 4px;
     color: var(--muted);

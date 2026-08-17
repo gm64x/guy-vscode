@@ -24,6 +24,7 @@ All analysis runs locally. GUY uses bundled Tree-sitter WASM parsers and does no
 - **Focus the analysis:** graph an entire file, the current selection, or only the function under the cursor.
 - **Connect graph and source:** select nodes, edges, callables, or paths to highlight their corresponding code.
 - **Spot risky complexity:** review node, edge, component, path, and cyclomatic-complexity metrics.
+- **Know when the model is partial:** get a warning with source locations when GUY encounters control-flow syntax it does not model yet.
 - **Keep working while editing:** the preview refreshes as the active source changes and can be locked or pinned when needed.
 
 ## Getting started
@@ -43,8 +44,11 @@ You can also use the branch icon in the editor title bar. To narrow the graph, r
 - Abrupt flow from `return`, `break`, `continue`, and exceptions.
 - Callable boundaries and source ranges.
 - Metrics for nodes, edges, decisions, connected components, independent paths, and cyclomatic complexity.
+- Unsupported control-flow constructs, including their type, line, and source preview.
 
 Use **simplified** mode to compact consecutive statements or **detailed** mode to inspect individual operations. The preview can switch between top-to-bottom and left-to-right layouts.
+
+When Tree-sitter recognizes a construct whose control-flow semantics are not modeled yet, GUY keeps it visible as a regular statement and shows an **Unsupported syntax** warning. This prevents an opaque construct from being mistaken for fully modeled flow.
 
 ## Supported languages
 
@@ -91,7 +95,7 @@ GUY can recover a partial graph from many syntax errors. When parser recovery wa
 - Exception matching is type-agnostic, so exception edges represent possible handlers and a possible unhandled route.
 - Syntax recovery can produce an incomplete graph.
 - Independent paths are capped for very large graphs to keep the preview responsive.
-- Some language-specific constructs use the closest shared CFG representation. Labels and `goto` remain source-ranged statements until dedicated flow modeling is added.
+- Unsupported language-specific constructs remain source-ranged statements and are listed in the preview until dedicated flow modeling and tests are added.
 
 ## Development
 

@@ -39,7 +39,7 @@ int process(const int *values, size_t count)
     return total;
 }
 
-// Deliberately opaque in the initial CFG model.
+// do/while and switch are modeled; goto and labels trigger an unsupported warning.
 int unsupported(int value)
 {
     do {

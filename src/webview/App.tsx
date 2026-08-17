@@ -501,6 +501,7 @@ function App() {
       </main>
 
       <aside aria-hidden={isSidebarCollapsed}>
+        {cfg?.unsupportedSyntax.length ? <UnsupportedWarnings cfg={cfg} /> : null}
         {cfg?.analysis.showMetricsPanel ? <Metrics cfg={cfg} /> : null}
       {cfg?.analysis.suggestions.length ? <Suggestions cfg={cfg} /> : null}
         {selectedNode ? <NodePreview node={selectedNode} /> : null}
@@ -624,6 +625,30 @@ function IconButton({
     >
       {children}
     </button>
+  );
+}
+
+function UnsupportedWarnings({ cfg }: { cfg: CFG }) {
+  const visible = cfg.unsupportedSyntax.slice(0, 8);
+  const remaining = cfg.unsupportedSyntax.length - visible.length;
+  return (
+    <section className="unsupported-warning">
+      <h2>Unsupported syntax</h2>
+      <p>
+        These constructs are preserved as statements, but their control-flow
+        semantics are not modeled yet.
+      </p>
+      <ul>
+        {visible.map((item) => (
+          <li key={`${item.nodeType}:${item.startLine}:${item.startColumn}`}>
+            <strong>{item.description}</strong>
+            <span>Line {item.startLine + 1}</span>
+            <code title={item.code}>{item.code}</code>
+          </li>
+        ))}
+      </ul>
+      {remaining > 0 ? <p>And {remaining} more.</p> : null}
+    </section>
   );
 }
 

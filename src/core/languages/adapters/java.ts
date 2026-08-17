@@ -30,6 +30,11 @@ const BODIES = new Set(["block", "class_body", "interface_body", "enum_body"]);
 
 export const javaAdapter: LanguageAdapter = {
   language: "java",
+  unsupportedSyntax: {
+    labeled_statement: "labeled control flow",
+    yield_statement: "yield statement",
+    assert_statement: "assert statement",
+  },
   wasmFileForSource: () => "tree-sitter-java/tree-sitter-java.wasm",
   parseRoot: (root, context) => container(root, context),
 };

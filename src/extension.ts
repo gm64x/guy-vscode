@@ -261,7 +261,13 @@ function getSupportedEditor(showMessage = true): vscode.TextEditor | undefined {
 }
 
 function showDiagnostics(cfg: CFG): void {
-  if (cfg.diagnostics.length > 0) {
+  if (cfg.unsupportedSyntax.length > 0) {
+    const count = cfg.unsupportedSyntax.length;
+    void vscode.window.showWarningMessage(
+      `GUY found ${count} unsupported control-flow ${count === 1 ? "construct" : "constructs"}. ` +
+      "They remain visible as statements, but the graph may be incomplete. See the preview for locations.",
+    );
+  } else if (cfg.diagnostics.length > 0) {
     void vscode.window.showInformationMessage(cfg.diagnostics[0]);
   }
 }

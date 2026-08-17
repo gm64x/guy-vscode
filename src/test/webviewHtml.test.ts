@@ -9,7 +9,10 @@ suite("Webview HTML", () => {
       cspSource: "vscode-webview:",
       asWebviewUri: (uri: vscode.Uri) => uri,
     } as vscode.Webview;
-    const cfg = { diagnostics: ['</script><script id="injected">'] } as CFG;
+    const cfg = {
+      diagnostics: ['</script><script id="injected">'],
+      unsupportedSyntax: [{ code: '</script><script id="unsupported">' }],
+    } as CFG;
 
     const html = getWebviewHtml(webview, vscode.Uri.file("/extension"), cfg);
     const cspNonce = html.match(/script-src 'nonce-([^']+)'/)?.[1];
@@ -22,6 +25,7 @@ suite("Webview HTML", () => {
       assert.deepStrictEqual(nonces, [cspNonce]);
     }
     assert.ok(html.includes('\\u003c/script>\\u003cscript id=\\"injected\\">'));
+    assert.ok(html.includes('\\u003c/script>\\u003cscript id=\\"unsupported\\">'));
     assert.ok(!html.includes('</script><script id="injected">'));
   });
 });

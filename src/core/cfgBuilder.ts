@@ -75,6 +75,7 @@ class CFGBuildSession {
     );
     let body = parsed.body;
     let functionName: string | undefined;
+    let unsupportedSyntax = parsed.unsupportedSyntax;
     this.diagnostics = [...parsed.diagnostics];
 
     if (this.options.mode === "function") {
@@ -94,6 +95,9 @@ class CFGBuildSession {
       }
       body = currentFunction.body;
       functionName = currentFunction.name;
+      unsupportedSyntax = unsupportedSyntax.filter((item) =>
+        containsRange(currentFunction, item),
+      );
     }
 
     const sourceMeta: CFGSourceMeta = {
@@ -173,6 +177,7 @@ class CFGBuildSession {
       sourceMeta,
       functions: parsed.functions.map(toFunctionInfo),
       diagnostics: this.diagnostics,
+      unsupportedSyntax,
     };
   }
 
@@ -662,6 +667,14 @@ class CFGBuildSession {
       label,
     });
   }
+}
+
+function containsRange(container: SourceRange, range: SourceRange): boolean {
+  const startsAfter = range.startLine > container.startLine ||
+    range.startLine === container.startLine && range.startColumn >= container.startColumn;
+  const endsBefore = range.endLine < container.endLine ||
+    range.endLine === container.endLine && range.endColumn <= container.endColumn;
+  return startsAfter && endsBefore;
 }
 
 function compactStatements(statements: ControlFlowNode[]): ControlFlowNode[] {

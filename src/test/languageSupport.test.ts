@@ -149,6 +149,68 @@ suite("Multi-language support", () => {
     }
   });
 
+  test("reports unsupported control-flow syntax for every language", async () => {
+    const fixtures: Array<[
+      SupportedLanguage,
+      string,
+      string,
+    ]> = [
+      ["python", "def run():\n    yield 1", "yield"],
+      ["java", "class Demo { void run() { outer: while (true) { break outer; } } }", "labeled_statement"],
+      ["php", "<?php function run() { start: goto start; }", "goto_statement"],
+      ["c", "int run() { start: goto start; }", "goto_statement"],
+      ["go", "package main\nfunc run() { defer cleanup() }", "defer_statement"],
+      ["rust", "async fn run() { work().await; }", "await_expression"],
+    ];
+
+    for (const [language, source, nodeType] of fixtures) {
+      const cfg = await generate(language, source, "file");
+      const warning = cfg.unsupportedSyntax.find((item) => item.nodeType === nodeType);
+      assert.ok(warning, `${language} should report ${nodeType}`);
+      assert.ok(warning.code.length > 0);
+    }
+  });
+
+  test("applies selection offsets to unsupported syntax locations", async () => {
+    const cfg = await new CFGBuilder().generate({
+      language: "python",
+      source: "yield 1",
+      mode: "selection",
+      viewMode: "detailed",
+      selectionOffset: { line: 7, column: 4 },
+    });
+
+    assert.equal(cfg.unsupportedSyntax[0]?.nodeType, "yield");
+    assert.equal(cfg.unsupportedSyntax[0]?.startLine, 7);
+    assert.equal(cfg.unsupportedSyntax[0]?.startColumn, 4);
+  });
+
+  test("limits unsupported syntax warnings to the selected function", async () => {
+    const source = [
+      "def generator():",
+      "    yield 1",
+      "",
+      "def clean():",
+      "    return 1",
+    ].join("\n");
+
+    const file = await generate("python", source, "file");
+    const clean = await generateFunction("python", source, "clean");
+
+    assert.equal(file.unsupportedSyntax.length, 1);
+    assert.deepEqual(clean.unsupportedSyntax, []);
+  });
+
+  test("does not warn for fully modeled ordinary control flow", async () => {
+    const cfg = await generate(
+      "python",
+      "def run(value):\n    if value:\n        return value\n    return 0",
+      "file",
+    );
+
+    assert.deepEqual(cfg.unsupportedSyntax, []);
+  });
+
   test("PHP selects full and php-only grammars", async () => {
     const full = await generate("php", "<?php if ($ok) { work(); }", "file");
     const fragment = await generate("php", "if ($ok) { work(); }", "selection");

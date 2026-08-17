@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Unsupported control-flow syntax warnings with construct names, source locations, and code previews for Python, Java, PHP, C, Go, and Rust.
+- Function-mode filtering so warnings only describe unsupported constructs inside the selected callable.
+
 ## [0.1.5] - 2026-08-17
 
 ### Added

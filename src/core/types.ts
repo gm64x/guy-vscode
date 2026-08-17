@@ -95,6 +95,7 @@ export interface CFG {
   sourceMeta: CFGSourceMeta;
   functions: FunctionInfo[];
   diagnostics: string[];
+  unsupportedSyntax: UnsupportedSyntax[];
 }
 
 export interface GenerateCFGOptions {
@@ -120,4 +121,4 @@ export interface SourceOffset {
   line: number;
   column: number;
 }
-import type { SupportedLanguage } from "./languages/model";
+import type { SupportedLanguage, UnsupportedSyntax } from "./languages/model";

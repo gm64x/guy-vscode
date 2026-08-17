@@ -67,7 +67,14 @@ export interface ParsedSource {
   body: ControlFlowNode[];
   functions: CallableStatement[];
   diagnostics: string[];
+  unsupportedSyntax: UnsupportedSyntax[];
   treeSitterAvailable: boolean;
+}
+
+export interface UnsupportedSyntax extends SourceRange {
+  nodeType: string;
+  description: string;
+  code: string;
 }
 
 export interface ParseContext {
@@ -78,6 +85,7 @@ export interface ParseContext {
 
 export interface LanguageAdapter {
   readonly language: SupportedLanguage;
+  readonly unsupportedSyntax?: Readonly<Record<string, string>>;
   wasmFileForSource(source: string): string;
   parseRoot(root: TreeSitterNode, context: ParseContext): ControlFlowNode[];
 }

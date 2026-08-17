@@ -62,6 +62,7 @@ done:
 }
 
 func runWorker(values []int, done <-chan struct{}) {
+	defer cleanup()
 	go process(values)
 	for {
 		select {

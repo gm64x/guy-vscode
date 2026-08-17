@@ -36,7 +36,6 @@ def all_constructs(items, ready=True):
     finally:
         ready = False
 
-    # These remain opaque until their dedicated CFG nodes are implemented.
     for value in items:
         match value:
             case 0:
@@ -44,3 +43,9 @@ def all_constructs(items, ready=True):
             case _:
                 total += 2
     return total
+
+
+# Generator suspension remains visible and triggers an unsupported warning.
+def unsupported_generator(items):
+    for item in items:
+        yield item

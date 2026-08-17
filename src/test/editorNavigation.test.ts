@@ -56,7 +56,8 @@ suite("Editor navigation", () => {
         generatedAt: new Date().toISOString()
       },
       functions: [],
-      diagnostics: []
+      diagnostics: [],
+      unsupportedSyntax: []
     } satisfies CFG;
     const navigator = new EditorNavigator();
 

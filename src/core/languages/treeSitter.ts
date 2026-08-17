@@ -6,6 +6,7 @@ import {
   LanguageParser,
   ParsedSource,
   TreeSitterNode,
+  UnsupportedSyntax,
 } from "./model";
 import { SourceOffset, SourcePosition, SourceRange } from "../types";
 
@@ -56,10 +57,16 @@ export class TreeSitterLanguageParser implements LanguageParser {
         offset,
         wasmFile,
       });
+      const unsupportedSyntax = collectUnsupportedSyntax(
+        tree.rootNode,
+        this.adapter.unsupportedSyntax,
+        offset,
+      );
       return {
         body,
         functions: collectFunctions(body),
         diagnostics,
+        unsupportedSyntax,
         treeSitterAvailable: true,
       };
     } catch (error: unknown) {
@@ -72,6 +79,7 @@ export class TreeSitterLanguageParser implements LanguageParser {
         body: [],
         functions: [],
         diagnostics,
+        unsupportedSyntax: [],
         treeSitterAvailable: false,
       };
     } finally {
@@ -175,6 +183,31 @@ export function mergeRange(start: SourceRange, end: SourceRange): SourceRange {
 
 export function firstLine(text: string): string {
   return text.split(/\r?\n/, 1)[0]?.trim() ?? text.trim();
+}
+
+function collectUnsupportedSyntax(
+  root: TreeSitterNode,
+  rules: Readonly<Record<string, string>> | undefined,
+  offset: SourceOffset,
+): UnsupportedSyntax[] {
+  if (!rules) {return [];}
+  const unsupported: UnsupportedSyntax[] = [];
+  const visit = (node: TreeSitterNode): void => {
+    const description = rules[node.type];
+    if (description) {
+      unsupported.push({
+        ...rangeFromNode(node, offset),
+        nodeType: node.type,
+        description,
+        code: firstLine(node.text),
+      });
+    }
+    for (const child of namedChildren(node)) {
+      visit(child);
+    }
+  };
+  visit(root);
+  return unsupported;
 }
 
 function collectFunctions(nodes: ControlFlowNode[]): CallableStatement[] {

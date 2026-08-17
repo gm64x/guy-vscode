@@ -34,6 +34,10 @@ const ARM_TYPES = new Set(["match_arm"]);
 
 export const rustAdapter: LanguageAdapter = {
   language: "rust",
+  unsupportedSyntax: {
+    await_expression: "await expression",
+    label: "labeled control flow",
+  },
   wasmFileForSource: () => "tree-sitter-wasm/out/rust/tree-sitter-rust.wasm",
   parseRoot: (root, context) => parseContainer(root, context),
 };

@@ -63,12 +63,18 @@ class AllConstructs
         return $value;
     }
 
-    // Deliberately opaque in the initial CFG model.
-    public function unsupported(int $value): int
+    // do/while and match are modeled; yield, goto, and labels trigger warnings.
+    public function unsupported(int $value)
     {
+        retry:
         do {
             $value--;
         } while ($value > 0);
+        if ($value < 0) {
+            $value++;
+            goto retry;
+        }
+        yield $value;
         return match ($value) {
             0 => 1,
             default => 2,

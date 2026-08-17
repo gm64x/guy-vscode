@@ -68,6 +68,7 @@ class AllConstructs {
         }
     }
 
+    // Labels and switch yield remain visible and trigger unsupported warnings.
     int labeled(int value) {
         outer:
         while (value > 0) {

@@ -30,6 +30,13 @@ const CASE_TYPES = new Set([
 
 export const goAdapter: LanguageAdapter = {
   language: "go",
+  unsupportedSyntax: {
+    defer_statement: "defer statement",
+    go_statement: "goroutine launch",
+    goto_statement: "goto statement",
+    labeled_statement: "labeled control flow",
+    fallthrough_statement: "fallthrough statement",
+  },
   wasmFileForSource: () => "tree-sitter-wasm/out/go/tree-sitter-go.wasm",
   parseRoot: (root, context) => parseContainer(root, context),
 };

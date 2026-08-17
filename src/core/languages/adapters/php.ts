@@ -52,6 +52,11 @@ const CALLABLE_TYPES = new Set([
 
 export const phpAdapter: LanguageAdapter = {
   language: "php",
+  unsupportedSyntax: {
+    goto_statement: "goto statement",
+    named_label_statement: "named label",
+    yield_expression: "yield expression",
+  },
   wasmFileForSource: (source) =>
     /<\?/.test(source)
       ? "tree-sitter-php/tree-sitter-php.wasm"

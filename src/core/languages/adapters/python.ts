@@ -15,6 +15,10 @@ import {
 
 export const pythonAdapter: LanguageAdapter = {
   language: "python",
+  unsupportedSyntax: {
+    yield: "yield expression",
+    assert_statement: "assert statement",
+  },
   wasmFileForSource: () => "tree-sitter-python/tree-sitter-python.wasm",
   parseRoot: (root, context) => nodesFromContainer(root, context),
 };
