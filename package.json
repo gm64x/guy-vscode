@@ -1,15 +1,26 @@
 {
     "name": "guy",
-    "displayName": "Guy",
-    "description": "Graphing Utility for Your code",
-    "version": "0.1.4",
+    "displayName": "GUY - Control Flow Graphs",
+    "description": "Visualize interactive control-flow graphs for Python, Java, PHP, C, Go, and Rust.",
+    "version": "0.1.5",
     "publisher": "gm64x",
+    "icon": "media/icon.png",
+    "pricing": "Free",
+    "qna": "https://github.com/gm64x/guy-vscode/issues",
     "keywords": [
         "control flow",
         "control flow graph",
         "cfg",
         "code visualization",
-        "tree-sitter"
+        "tree-sitter",
+        "cyclomatic complexity",
+        "code analysis",
+        "python",
+        "java",
+        "php",
+        "c",
+        "go",
+        "rust"
     ],
     "homepage": "https://github.com/gm64x/guy-vscode#readme",
     "bugs": {

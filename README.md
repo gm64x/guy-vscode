@@ -1,10 +1,12 @@
 <div align="center">
 
+<img src="media/icon.png" alt="GUY control-flow graph logo" width="128">
+
 # GUY
 
 ### Graphing Utility for Your code
 
-Visualize control flow for Python, Java, PHP, C, Go, and Rust directly in Visual Studio Code.
+Interactive control-flow graphs for Python, Java, PHP, C, Go, and Rust — directly in Visual Studio Code.
 
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.120.0-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)](https://code.visualstudio.com/)
 [![GitHub stars](https://img.shields.io/github/stars/gm64x/guy-vscode?style=for-the-badge&logo=github)](https://github.com/gm64x/guy-vscode/stargazers)
@@ -12,33 +14,88 @@ Visualize control flow for Python, Java, PHP, C, Go, and Rust directly in Visual
 
 </div>
 
-GUY uses Tree-sitter WASM to build an interactive control-flow graph (CFG) and connect it back to source code. Use it to inspect branching, cyclomatic complexity, and independent execution paths without leaving the editor.
+GUY turns source code into an interactive control-flow graph (CFG). Follow branches and loops, inspect complexity, explore independent execution paths, and jump from the graph back to the exact source range without leaving the editor.
 
-## Supported languages and coverage
+All analysis runs locally. GUY uses bundled Tree-sitter WASM parsers and does not require a language runtime or send source code to an external service.
 
-GUY supports these languages:
+## Why use GUY?
 
-- Python (`.py`)
-- Java (`.java`)
-- PHP (`.php`)
-- C (`.c`, plus `.h` when VS Code identifies the document as C)
-- Go (`.go`)
-- Rust (`.rs`)
+- **Understand unfamiliar code:** see decisions, loops, early returns, and exception paths at a glance.
+- **Focus the analysis:** graph an entire file, the current selection, or only the function under the cursor.
+- **Connect graph and source:** select nodes, edges, callables, or paths to highlight their corresponding code.
+- **Spot risky complexity:** review node, edge, component, path, and cyclomatic-complexity metrics.
+- **Keep working while editing:** the preview refreshes as the active source changes and can be locked or pinned when needed.
 
-The initial cross-language coverage includes functions, methods and constructors; `if`/`else-if`/`else`; `for`, `foreach`, and enhanced `for`; `while`; `return`; `break`; `continue`; and `try`/`catch`/`finally`/`throw` where the language provides them. Python also retains `with`, `raise`, and loop `else` behavior.
+## Getting started
 
-## Features
+1. Install **GUY - Control Flow Graphs** from the Extensions view.
+2. Open a supported source file.
+3. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run **GUY: Generate CFG from File**.
+4. Click a graph item to navigate to and highlight its source code.
 
-- Generate a CFG from an entire file, a selected range, or the callable under the cursor.
-- Refresh the graph automatically while editing or switching between supported files.
-- Lock the preview to one file or pin the current graph version independently.
-- Switch between simplified and detailed graph views.
-- Navigate from graph nodes, edges, callables, and paths to source ranges.
-- Inspect nodes, edges, decisions, connected components, and cyclomatic complexity.
-- Highlight source code and show lightweight warnings for large or complex graphs.
-- Recover a partial CFG from many syntax errors, with a diagnostic when recovery was needed.
+You can also use the branch icon in the editor title bar. To narrow the graph, right-click selected code and choose **GUY: Generate CFG from Selection**, or place the cursor inside a callable and choose **GUY: Generate CFG from Current Function**.
 
-## Quick start
+## What the graph shows
+
+- Statements and sequential execution flow.
+- Decision branches for `if`/`else-if`/`else` and supported `switch`/`match` forms.
+- Loop entry, body, continuation, and exit paths.
+- Abrupt flow from `return`, `break`, `continue`, and exceptions.
+- Callable boundaries and source ranges.
+- Metrics for nodes, edges, decisions, connected components, independent paths, and cyclomatic complexity.
+
+Use **simplified** mode to compact consecutive statements or **detailed** mode to inspect individual operations. The preview can switch between top-to-bottom and left-to-right layouts.
+
+## Supported languages
+
+| Language | Files | Core coverage |
+| --- | --- | --- |
+| Python | `.py` | Functions, branches, loops, `with`, `return`, `break`, `continue`, `raise`, `try`/`except`/`finally`, and loop `else` |
+| Java | `.java` | Methods, constructors, branches, classic/enhanced loops, jumps, and `try`/`catch`/`finally`/`throw` |
+| PHP | `.php` | Functions, methods, branches, `for`/`foreach`/`while`, jumps, and exception flow |
+| C | `.c`, `.h`* | Functions, branches, loops, `return`, `break`, and `continue` |
+| Go | `.go` | Functions, methods, branches, loops, `return`, `break`, and `continue` |
+| Rust | `.rs` | Functions, methods, branches, loops, `return`, `break`, and `continue` |
+
+\* Header files are supported when VS Code identifies the document language as C.
+
+GUY can recover a partial graph from many syntax errors. When parser recovery was required, the preview displays a diagnostic so you know the graph may be incomplete.
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `GUY: Generate CFG from File` | Build a graph for the active supported file. |
+| `GUY: Generate CFG from Selection` | Build a graph for the selected source range. |
+| `GUY: Generate CFG from Current Function` | Build a graph for the function, method, or constructor containing the cursor. |
+| `GUY: Toggle Simplified/Detailed CFG View` | Switch the current graph detail mode. |
+
+## Settings
+
+| Setting | Default | Description |
+| --- | ---: | --- |
+| `guy.autoOpenPreview` | `true` | Open the CFG preview automatically after generation. |
+| `guy.graphLayout` | `top-bottom` | Set the default direction to `top-bottom` or `left-right`. |
+| `guy.showMetricsPanel` | `true` | Show graph metrics in the preview. |
+| `guy.highlightCodeOnNodeClick` | `true` | Highlight source code when a graph item is selected. |
+| `guy.maxNodesBeforeWarning` | `100` | Warn when a graph exceeds this number of nodes. |
+| `guy.highComplexityThreshold` | `10` | Set the cyclomatic-complexity threshold for suggestions. |
+
+## Requirements
+
+- Visual Studio Code `^1.120.0`.
+- No Python, Java, PHP, C, Go, or Rust runtime is required for graph generation.
+
+## Current limitations
+
+- Exception matching is type-agnostic, so exception edges represent possible handlers and a possible unhandled route.
+- Syntax recovery can produce an incomplete graph.
+- Independent paths are capped for very large graphs to keep the preview responsive.
+- Some language-specific constructs use the closest shared CFG representation. Labels and `goto` remain source-ranged statements until dedicated flow modeling is added.
+
+## Development
+
+The project uses Node.js 22, configured in `mise.toml`.
 
 ```sh
 git clone https://github.com/gm64x/guy-vscode.git
@@ -48,40 +105,9 @@ mise exec -- npm install
 mise exec -- npm run compile
 ```
 
-Press `F5` in VS Code to launch an Extension Development Host. Open a supported source file and run **GUY: Generate CFG from File** from the Command Palette or editor title bar.
-
-For a focused graph, select code and run **GUY: Generate CFG from Selection**, or place the cursor inside a function, method, or constructor and run **GUY: Generate CFG from Current Function**.
-
-## Commands
-
-| Command | Description |
-| --- | --- |
-| `GUY: Generate CFG from File` | Builds a graph for the active supported file. |
-| `GUY: Generate CFG from Selection` | Builds a graph for the selected code. |
-| `GUY: Generate CFG from Current Function` | Builds a graph for the callable containing the cursor. |
-| `GUY: Toggle Simplified/Detailed CFG View` | Switches the current graph detail mode. |
-
-## Settings
-
-| Setting | Default | Description |
-| --- | ---: | --- |
-| `guy.autoOpenPreview` | `true` | Open the CFG preview automatically after generation. |
-| `guy.graphLayout` | `top-bottom` | Default graph direction: `top-bottom` or `left-right`. |
-| `guy.showMetricsPanel` | `true` | Show the metrics panel in the preview. |
-| `guy.highlightCodeOnNodeClick` | `true` | Highlight source code when graph items are selected. |
-| `guy.maxNodesBeforeWarning` | `100` | Warn when a graph exceeds this number of nodes. |
-| `guy.highComplexityThreshold` | `10` | Complexity threshold for suggestions. |
-
-## Requirements and development
-
-- Visual Studio Code `^1.120.0`.
-- Node.js 22, configured locally by `mise.toml` (`mise install`).
-- No language runtime is required for CFG generation; parsers run through `web-tree-sitter` and bundled grammar WASMs.
-
-After activating mise in the shell, the regular npm commands are available:
+Press `F5` in VS Code to launch an Extension Development Host. Useful validation commands are:
 
 ```sh
-npm install
 npm run check-types
 npm run lint
 npm run compile-tests
@@ -89,7 +115,7 @@ npm run compile
 npm test
 ```
 
-Create a production bundle with `npm run package`, or build the installable extension with `npm run package:vsix`. The `.vsix` file is written to the repository root.
+Create a production bundle with `npm run package`, or build an installable package with `npm run package:vsix`.
 
 ### Adding another language
 
@@ -99,16 +125,12 @@ Create a production bundle with `npm run package`, or build the installable exte
 4. Enable its editor menu conditions.
 5. Add real WASM-backed fixtures for file, selection, and callable modes.
 
-The shared CFG builder and automatic WASM asset discovery do not need language-specific changes.
+The shared CFG builder and automatic WASM asset discovery do not need language-specific branches.
 
-## Limitations
+## Help and feedback
 
-- `goto`/labels and language-specific jump semantics remain represented as source-ranged statements; `switch`/`case` and `match` are expanded into CFG branches where supported. Java `yield`, PHP `match` arms, and Rust/Go-specific constructs use the closest shared CFG representation.
-- Exception matching is type-agnostic, so exception edges represent possible handlers and any possible unhandled path.
-- Syntax recovery can produce an incomplete graph.
-- Independent paths are limited for very large graphs to keep the preview responsive.
-
-## Links
-
-- [Report an issue](https://github.com/gm64x/guy-vscode/issues)
-- [Source repository](https://github.com/gm64x/guy-vscode)
+- [Ask a question or share an idea](https://github.com/gm64x/guy-vscode/issues/new)
+- [Report a bug or request a feature](https://github.com/gm64x/guy-vscode/issues)
+- [Read the contribution guide](CONTRIBUTING.md)
+- [Review release changes](CHANGELOG.md)
+- [Browse the source code](https://github.com/gm64x/guy-vscode)
