@@ -41,8 +41,9 @@ The initial cross-language coverage includes functions, methods and constructors
 ```sh
 git clone https://github.com/gm64x/guy-vscode.git
 cd guy-vscode
-npm install
-npm run compile
+mise install
+mise exec -- npm install
+mise exec -- npm run compile
 ```
 
 Press `F5` in VS Code to launch an Extension Development Host. Open a supported source file and run **GUY: Generate CFG from File** from the Command Palette or editor title bar.
@@ -72,7 +73,10 @@ For a focused graph, select code and run **GUY: Generate CFG from Selection**, o
 ## Requirements and development
 
 - Visual Studio Code `^1.120.0`.
+- Node.js 22, configured locally by `mise.toml` (`mise install`).
 - No language runtime is required for CFG generation; parsers run through `web-tree-sitter` and bundled grammar WASMs.
+
+After activating mise in the shell, the regular npm commands are available:
 
 ```sh
 npm install
