@@ -114,6 +114,8 @@ web_modules/
 
 .next
 out
+dist/
+*.vsix
 
 # Nuxt.js build / generate output
 
@@ -176,5 +178,4 @@ dist
 
 # Agent tooling
 /.learnings/
-/.agents/
 .gitignore
