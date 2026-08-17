@@ -91,7 +91,7 @@ async function main() {
       plugins: [esbuildProblemMatcherPlugin],
     }),
     esbuild.context({
-      entryPoints: ["src/webview/src/App.tsx"],
+      entryPoints: ["src/webview/App.tsx"],
       bundle: true,
       format: "iife",
       minify: production,
