@@ -1,12 +1,10 @@
 <div align="center">
 
-
-
 # GUY
 
 ### Graphing Utility for Your code
 
-Visualize Python control flow directly inside Visual Studio Code.
+Visualize control flow for Python, Java, PHP, C, Go, and Rust directly in Visual Studio Code.
 
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.120.0-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)](https://code.visualstudio.com/)
 [![GitHub stars](https://img.shields.io/github/stars/gm64x/guy-vscode?style=for-the-badge&logo=github)](https://github.com/gm64x/guy-vscode/stargazers)
@@ -14,24 +12,31 @@ Visualize Python control flow directly inside Visual Studio Code.
 
 </div>
 
-GUY parses Python code, builds an interactive control-flow graph (CFG), and connects the graph back to your source code. Use it to understand branching logic, inspect complexity, and explore independent execution paths without leaving VS Code.
+GUY uses Tree-sitter WASM to build an interactive control-flow graph (CFG) and connect it back to source code. Use it to inspect branching, cyclomatic complexity, and independent execution paths without leaving the editor.
+
+## Supported languages and coverage
+
+GUY supports these languages:
+
+- Python (`.py`)
+- Java (`.java`)
+- PHP (`.php`)
+- C (`.c`, plus `.h` when VS Code identifies the document as C)
+- Go (`.go`)
+- Rust (`.rs`)
+
+The initial cross-language coverage includes functions, methods and constructors; `if`/`else-if`/`else`; `for`, `foreach`, and enhanced `for`; `while`; `return`; `break`; `continue`; and `try`/`catch`/`finally`/`throw` where the language provides them. Python also retains `with`, `raise`, and loop `else` behavior.
 
 ## Features
 
-- Generate a CFG from an entire Python file, a selected code range, or the function under the cursor.
-- Explore the graph in an interactive preview with zoom, fit, center, and layout controls.
+- Generate a CFG from an entire file, a selected range, or the callable under the cursor.
 - Switch between simplified and detailed graph views.
-- Navigate between graph nodes, edges, functions, independent paths, and source code.
-- Inspect cyclomatic complexity, nodes, edges, decisions, and connected components.
-- Highlight source code when selecting graph items.
-- Get lightweight complexity suggestions and visual warnings for large graphs.
-- Understand common Python constructs including `if`/`elif`/`else`, `for`, `while`, `return`, `break`, and `continue`.
+- Navigate from graph nodes, edges, callables, and paths to source ranges.
+- Inspect nodes, edges, decisions, connected components, and cyclomatic complexity.
+- Highlight source code and show lightweight warnings for large or complex graphs.
+- Recover a partial CFG from many syntax errors, with a diagnostic when recovery was needed.
 
 ## Quick start
-
-### Run locally
-
-Clone the repository, install dependencies, and open it in VS Code:
 
 ```sh
 git clone https://github.com/gm64x/guy-vscode.git
@@ -40,76 +45,62 @@ npm install
 npm run compile
 ```
 
-Press `F5` in VS Code to launch an Extension Development Host with GUY enabled.
+Press `F5` in VS Code to launch an Extension Development Host. Open a supported source file and run **GUY: Generate CFG from File** from the Command Palette or editor title bar.
 
-### Generate your first graph
-
-1. Open a Python file.
-2. Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
-3. Run **GUY: Generate CFG from File**.
-
-For a focused view, select Python code and run **GUY: Generate CFG from Selection**, or place the cursor inside a function and run **GUY: Generate CFG from Current Function**.
+For a focused graph, select code and run **GUY: Generate CFG from Selection**, or place the cursor inside a function, method, or constructor and run **GUY: Generate CFG from Current Function**.
 
 ## Commands
 
 | Command | Description |
 | --- | --- |
-| `GUY: Generate CFG from File` | Builds a graph for the active Python file. |
-| `GUY: Generate CFG from Selection` | Builds a graph for the selected Python code. |
-| `GUY: Generate CFG from Current Function` | Builds a graph for the function containing the cursor. |
-| `GUY: Toggle Simplified/Detailed CFG View` | Switches the current graph between simplified and detailed mode. |
-
-The file command is also available in the Python editor title bar. Selection and current-function commands are available in the Python editor context menu.
-
-## Working with the preview
-
-The CFG preview provides:
-
-- an interactive graph canvas with pan, zoom, fit, center, and reset controls;
-- a sidebar for nodes, edges, functions, and independent paths;
-- a metrics panel with the cyclomatic complexity formula;
-- source navigation and highlighting from graph selections;
-- a simplified/detailed view toggle.
+| `GUY: Generate CFG from File` | Builds a graph for the active supported file. |
+| `GUY: Generate CFG from Selection` | Builds a graph for the selected code. |
+| `GUY: Generate CFG from Current Function` | Builds a graph for the callable containing the cursor. |
+| `GUY: Toggle Simplified/Detailed CFG View` | Switches the current graph detail mode. |
 
 ## Settings
-
-Configure GUY through **Settings** or `settings.json`:
 
 | Setting | Default | Description |
 | --- | ---: | --- |
 | `guy.autoOpenPreview` | `true` | Open the CFG preview automatically after generation. |
 | `guy.graphLayout` | `top-bottom` | Default graph direction: `top-bottom` or `left-right`. |
 | `guy.showMetricsPanel` | `true` | Show the metrics panel in the preview. |
-| `guy.highlightCodeOnNodeClick` | `true` | Highlight source code when nodes or edges are selected. |
+| `guy.highlightCodeOnNodeClick` | `true` | Highlight source code when graph items are selected. |
 | `guy.maxNodesBeforeWarning` | `100` | Warn when a graph exceeds this number of nodes. |
-| `guy.highComplexityThreshold` | `10` | Complexity threshold for lightweight suggestions. |
+| `guy.highComplexityThreshold` | `10` | Complexity threshold for suggestions. |
 
-## Requirements
+## Requirements and development
 
 - Visual Studio Code `^1.120.0`.
-- Python source files (`.py` or `python` language mode).
-
-## Development
+- No language runtime is required for CFG generation; parsers run through `web-tree-sitter` and bundled grammar WASMs.
 
 ```sh
 npm install
+npm run check-types
+npm run lint
+npm run compile-tests
 npm run compile
 npm test
 ```
 
-Create a production bundle with:
+Create a production bundle with `npm run package`, or build the installable extension with `npm run package:vsix`. The `.vsix` file is written to the repository root.
 
-```sh
-npm run package
-```
+### Adding another language
 
-Example Python inputs are available in [`src/examples`](src/examples).
+1. Install its official `tree-sitter-*` grammar package.
+2. Create an adapter that converts grammar nodes to the neutral control-flow IR.
+3. Register its metadata, extension rules, display name, and VS Code language ID.
+4. Enable its editor menu conditions.
+5. Add real WASM-backed fixtures for file, selection, and callable modes.
+
+The shared CFG builder and automatic WASM asset discovery do not need language-specific changes.
 
 ## Limitations
 
-- CFG generation currently supports Python only.
-- Source with syntax errors may produce incomplete graphs because of parser recovery.
-- Independent paths are hidden for very large graphs to keep the preview responsive.
+- `goto`/labels and language-specific jump semantics remain represented as source-ranged statements; `switch`/`case` and `match` are expanded into CFG branches where supported. Java `yield`, PHP `match` arms, and Rust/Go-specific constructs use the closest shared CFG representation.
+- Exception matching is type-agnostic, so exception edges represent possible handlers and any possible unhandled path.
+- Syntax recovery can produce an incomplete graph.
+- Independent paths are limited for very large graphs to keep the preview responsive.
 
 ## Links
 
