@@ -60,10 +60,16 @@ async function copyTreeSitterAssets() {
   const wasmPackageDirectory = path.dirname(wasmPackageEntry);
   const wasmOutput = path.join("dist", "node_modules", wasmPackage);
   await fs.mkdir(path.join(wasmOutput, "out"), { recursive: true });
-  await fs.copyFile(
-    path.join(wasmPackageDirectory, "package.json"),
-    path.join(wasmOutput, "package.json"),
-  );
+  await Promise.all([
+    fs.copyFile(
+      path.join(wasmPackageDirectory, "package.json"),
+      path.join(wasmOutput, "package.json"),
+    ),
+    fs.copyFile(
+      wasmPackageEntry,
+      path.join(wasmOutput, path.basename(wasmPackageEntry)),
+    ),
+  ]);
   await Promise.all(
     ["go/tree-sitter-go.wasm", "rust/tree-sitter-rust.wasm"].map(async (file) => {
       const output = path.join(wasmOutput, "out", file);
