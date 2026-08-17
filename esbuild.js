@@ -31,39 +31,46 @@ async function copyTreeSitterAssets() {
   const runtimeWasmPath = require.resolve(
     "web-tree-sitter/web-tree-sitter.wasm",
   );
-  const pythonPackagePath = require.resolve("tree-sitter-python/package.json");
-  const pythonPackageDirectory = path.dirname(pythonPackagePath);
-
   const runtimeOutputDirectory = path.join(
     "dist",
     "node_modules",
     "web-tree-sitter",
   );
-  const pythonOutputDirectory = path.join(
-    "dist",
-    "node_modules",
-    "tree-sitter-python",
+  await fs.mkdir(runtimeOutputDirectory, { recursive: true });
+  await fs.copyFile(runtimeWasmPath, path.join(runtimeOutputDirectory, "web-tree-sitter.wasm"));
+  const packageJson = require("./package.json");
+  const grammarPackages = Object.keys(packageJson.dependencies).filter(
+    (name) => name.startsWith("tree-sitter-") && name !== "tree-sitter-wasm",
   );
-
-  await Promise.all([
-    fs.mkdir(runtimeOutputDirectory, { recursive: true }),
-    fs.mkdir(pythonOutputDirectory, { recursive: true }),
-  ]);
-
-  await Promise.all([
-    fs.copyFile(
-      runtimeWasmPath,
-      path.join(runtimeOutputDirectory, "web-tree-sitter.wasm"),
-    ),
-    fs.copyFile(
-      pythonPackagePath,
-      path.join(pythonOutputDirectory, "package.json"),
-    ),
-    fs.copyFile(
-      path.join(pythonPackageDirectory, "tree-sitter-python.wasm"),
-      path.join(pythonOutputDirectory, "tree-sitter-python.wasm"),
-    ),
-  ]);
+  for (const packageName of grammarPackages) {
+    const packagePath = require.resolve(`${packageName}/package.json`);
+    const directory = path.dirname(packagePath);
+    const files = await fs.readdir(directory);
+    const wasmFiles = files.filter((file) => file.endsWith(".wasm"));
+    if (wasmFiles.length === 0) {
+      throw new Error(`Grammar package ${packageName} does not contain a WASM asset.`);
+    }
+    const output = path.join("dist", "node_modules", packageName);
+    await fs.mkdir(output, { recursive: true });
+    await fs.copyFile(packagePath, path.join(output, "package.json"));
+    await Promise.all(wasmFiles.map((file) => fs.copyFile(path.join(directory, file), path.join(output, file))));
+  }
+  const wasmPackage = "tree-sitter-wasm";
+  const wasmPackageEntry = require.resolve(wasmPackage);
+  const wasmPackageDirectory = path.dirname(wasmPackageEntry);
+  const wasmOutput = path.join("dist", "node_modules", wasmPackage);
+  await fs.mkdir(path.join(wasmOutput, "out"), { recursive: true });
+  await fs.copyFile(
+    path.join(wasmPackageDirectory, "package.json"),
+    path.join(wasmOutput, "package.json"),
+  );
+  await Promise.all(
+    ["go/tree-sitter-go.wasm", "rust/tree-sitter-rust.wasm"].map(async (file) => {
+      const output = path.join(wasmOutput, "out", file);
+      await fs.mkdir(path.dirname(output), { recursive: true });
+      await fs.copyFile(path.join(wasmPackageDirectory, "out", file), output);
+    }),
+  );
 }
 
 async function main() {

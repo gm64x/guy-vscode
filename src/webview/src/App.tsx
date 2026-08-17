@@ -76,6 +76,7 @@ type CFG = {
     fileName?: string;
     functionName?: string;
     viewMode: "simplified" | "detailed";
+    language: "python" | "java" | "php" | "c" | "go" | "rust";
   };
   functions: Array<{ name: string; startLine: number }>;
   diagnostics: string[];
@@ -513,7 +514,7 @@ function App() {
                 <Icon name="workflow" size={48} />
                 <p className="empty-title">Ready to Analyze</p>
                 <p className="empty-subtitle">
-                  Open a Python file and run{" "}
+                  Open a supported source file and run{" "}
                   <strong>Generate CFG from File</strong> to visualize its
                   control flow.
                 </p>

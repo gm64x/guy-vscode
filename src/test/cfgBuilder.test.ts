@@ -2,18 +2,16 @@ import * as assert from "node:assert/strict";
 import { CFGBuilder } from "../core/cfgBuilder";
 import {
   LanguageParser,
-  ParsedPython,
-  PythonFunctionStatement,
-  PythonParser,
-} from "../core/parser";
+  ParsedSource,
+} from "../core/languages/model";
+import { getLanguageParser } from "../core/languages/registry";
 import { CFG } from "../core/types";
 
 suite("CFGBuilder parser regressions", () => {
-  test("PythonParser implements the exported LanguageParser contract", () => {
-    const parser: LanguageParser<ParsedPython, PythonFunctionStatement> =
-      new PythonParser();
+  test("Python parser implements the exported LanguageParser contract", () => {
+    const parser: LanguageParser = getLanguageParser("python");
 
-    assert.ok(parser instanceof PythonParser);
+    assert.ok(parser);
   });
 
   test("rejects Python source above the analysis limit", async () => {
@@ -212,6 +210,7 @@ suite("CFGBuilder parser regressions", () => {
 
 async function generate(source: string): Promise<CFG> {
   return new CFGBuilder().generate({
+    language: "python",
     source,
     mode: "file",
     viewMode: "detailed",
@@ -220,6 +219,7 @@ async function generate(source: string): Promise<CFG> {
 
 async function generateFunction(source: string): Promise<CFG> {
   return new CFGBuilder().generate({
+    language: "python",
     source,
     mode: "function",
     viewMode: "detailed",

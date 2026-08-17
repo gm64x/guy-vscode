@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { CFGBuilder } from "./core/cfgBuilder";
 import { CFG, CFGViewMode } from "./core/types";
+import { getLanguageDefinition, getSupportedLanguageNames, resolveSupportedLanguage } from "./core/languages/registry";
 import { EditorNavigator } from "./vscode/editorNavigation";
 import { GuyWebviewPanel, WebviewMessage } from "./vscode/webviewPanel";
 
@@ -56,7 +57,7 @@ export function deactivate(): void {
 }
 
 async function generateFromFile(builder: CFGBuilder): Promise<void> {
-  const editor = getPythonEditor();
+  const editor = getSupportedEditor();
   if (!editor) {
     return;
   }
@@ -65,13 +66,14 @@ async function generateFromFile(builder: CFGBuilder): Promise<void> {
     panel.loading();
     currentCfg = await builder.generate({
       source: editor.document.getText(),
+      language: resolveSupportedLanguage(editor.document.languageId, editor.document.fileName)!,
       fileName: editor.document.fileName,
       mode: "file",
       viewMode: currentViewMode,
       highComplexityThreshold: getHighComplexityThreshold(),
       ...getDisplaySettings(),
     });
-    if (getSetting("autoOpenPreview", true)) panel.show(currentCfg);
+    if (getSetting("autoOpenPreview", true)) {panel.show(currentCfg);}
     showDiagnostics(currentCfg);
   } catch (error) {
     showGenerationError(error);
@@ -79,13 +81,14 @@ async function generateFromFile(builder: CFGBuilder): Promise<void> {
 }
 
 async function generateFromSelection(builder: CFGBuilder): Promise<void> {
-  const editor = getPythonEditor();
+  const editor = getSupportedEditor();
   if (!editor) {
     return;
   }
   if (editor.selection.isEmpty) {
+    const language = resolveSupportedLanguage(editor.document.languageId, editor.document.fileName)!;
     void vscode.window.showInformationMessage(
-      "Select a Python code range before running Generate CFG from Selection.",
+      `Select a ${getLanguageDefinition(language).displayName} code range before running Generate CFG from Selection.`,
     );
     return;
   }
@@ -101,6 +104,7 @@ async function generateFromSelection(builder: CFGBuilder): Promise<void> {
     panel.loading();
     currentCfg = await builder.generate({
       source: editor.document.getText(editor.selection),
+      language: resolveSupportedLanguage(editor.document.languageId, editor.document.fileName)!,
       fileName: editor.document.fileName,
       mode: "selection",
       viewMode: currentViewMode,
@@ -108,7 +112,7 @@ async function generateFromSelection(builder: CFGBuilder): Promise<void> {
       highComplexityThreshold: getHighComplexityThreshold(),
       ...getDisplaySettings(),
     });
-    if (getSetting("autoOpenPreview", true)) panel.show(currentCfg);
+    if (getSetting("autoOpenPreview", true)) {panel.show(currentCfg);}
     showDiagnostics(currentCfg);
   } catch (error) {
     showGenerationError(error);
@@ -116,7 +120,7 @@ async function generateFromSelection(builder: CFGBuilder): Promise<void> {
 }
 
 async function generateFromCurrentFunction(builder: CFGBuilder): Promise<void> {
-  const editor = getPythonEditor();
+  const editor = getSupportedEditor();
   if (!editor) {
     return;
   }
@@ -130,6 +134,7 @@ async function generateFromCurrentFunction(builder: CFGBuilder): Promise<void> {
     panel.loading();
     currentCfg = await builder.generate({
       source: editor.document.getText(),
+      language: resolveSupportedLanguage(editor.document.languageId, editor.document.fileName)!,
       fileName: editor.document.fileName,
       mode: "function",
       viewMode: currentViewMode,
@@ -137,7 +142,7 @@ async function generateFromCurrentFunction(builder: CFGBuilder): Promise<void> {
       highComplexityThreshold: getHighComplexityThreshold(),
       ...getDisplaySettings(),
     });
-    if (getSetting("autoOpenPreview", true)) panel.show(currentCfg);
+    if (getSetting("autoOpenPreview", true)) {panel.show(currentCfg);}
     showDiagnostics(currentCfg);
   } catch (error) {
     showGenerationError(error);
@@ -166,6 +171,7 @@ async function toggleDetailMode(builder: CFGBuilder): Promise<void> {
       if (lastSelectionSource !== undefined) {
         currentCfg = await builder.generate({
           source: lastSelectionSource,
+          language: currentCfg.sourceMeta.language,
           fileName: lastSelectionFileName ?? document.fileName,
           mode: "selection",
           viewMode: currentViewMode,
@@ -180,6 +186,7 @@ async function toggleDetailMode(builder: CFGBuilder): Promise<void> {
     ) {
       currentCfg = await builder.generate({
         source: document.getText(),
+        language: currentCfg.sourceMeta.language,
         fileName: document.fileName,
         mode: "function",
         viewMode: currentViewMode,
@@ -190,6 +197,7 @@ async function toggleDetailMode(builder: CFGBuilder): Promise<void> {
     } else {
       currentCfg = await builder.generate({
         source: document.getText(),
+        language: currentCfg.sourceMeta.language,
         fileName: document.fileName,
         mode: "file",
         viewMode: currentViewMode,
@@ -251,7 +259,7 @@ async function generateFunctionByLine(
       // ignore
     }
   }
-  if (!editor) editor = getPythonEditor(false);
+  if (!editor) {editor = getSupportedEditor(false);}
   if (!editor) {
     return;
   }
@@ -266,15 +274,13 @@ async function generateFunctionByLine(
   await generateFromCurrentFunction(builder);
 }
 
-function getPythonEditor(showMessage = true): vscode.TextEditor | undefined {
+function getSupportedEditor(showMessage = true): vscode.TextEditor | undefined {
   const editor = vscode.window.activeTextEditor;
-  const isPython =
-    editor?.document.languageId === "python" ||
-    editor?.document.fileName.endsWith(".py");
-  if (!editor || !isPython) {
+  const language = resolveSupportedLanguage(editor?.document.languageId, editor?.document.fileName);
+  if (!editor || !language) {
     if (showMessage) {
       void vscode.window.showWarningMessage(
-        "Open a Python file before running GUY.",
+        `Open a ${formatLanguageNames(getSupportedLanguageNames())} file before running GUY.`,
       );
     }
     return undefined;
@@ -306,7 +312,7 @@ async function resolveDocumentForCfg(
       // ignore
     }
   }
-  const active = getPythonEditor(false);
+  const active = getSupportedEditor(false);
   return active?.document;
 }
 
@@ -314,6 +320,12 @@ function getHighComplexityThreshold(): number {
   return vscode.workspace
     .getConfiguration("guy")
     .get<number>("highComplexityThreshold", 10);
+}
+
+function formatLanguageNames(names: string[]): string {
+  return names.length < 2
+    ? names.join("")
+    : `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
 }
 
 function getSetting<T>(key: string, fallback: T): T {

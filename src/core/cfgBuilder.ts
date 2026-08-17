@@ -1,13 +1,14 @@
 import {
-  PythonAstNode,
-  PythonFunctionStatement,
-  PythonIfStatement,
-  PythonLoopStatement,
-  PythonParser,
-  PythonStatement,
-  PythonTryStatement,
-  PythonWithStatement,
-} from "./parser";
+  CallableStatement,
+  ConditionalStatement,
+  ContainerStatement,
+  ControlFlowNode,
+  LanguageParser,
+  LoopStatement,
+  SimpleStatement,
+  TryStatement,
+} from "./languages/model";
+import { getLanguageDefinition, getLanguageParser } from "./languages/registry";
 import { calculateMetrics } from "./metrics";
 import { calculateIndependentPaths } from "./paths";
 import {
@@ -19,7 +20,7 @@ import {
   CFGSourceMeta,
   CFGViewMode,
   GenerateCFGOptions,
-  PythonFunctionInfo,
+  FunctionInfo,
   SourceRange,
 } from "./types";
 
@@ -37,14 +38,12 @@ interface BuildContext {
     afterLoop: AbruptTarget;
   }>;
   exceptionTargets: AbruptTarget[];
-  finallyStack: PythonAstNode[][];
+  finallyStack: ControlFlowNode[][];
 }
 
 export class CFGBuilder {
-  private parser = new PythonParser();
-
   async generate(options: GenerateCFGOptions): Promise<CFG> {
-    const session = new CFGBuildSession(this.parser, options);
+    const session = new CFGBuildSession(getLanguageParser(options.language), options);
     return session.run();
   }
 }
@@ -58,13 +57,16 @@ class CFGBuildSession {
   private diagnostics: string[] = [];
 
   constructor(
-    private parser: PythonParser,
+    private parser: LanguageParser,
     private options: GenerateCFGOptions,
   ) {}
 
   async run(): Promise<CFG> {
+    const definition = getLanguageDefinition(this.options.language);
     if (Buffer.byteLength(this.options.source, "utf8") > MAX_SOURCE_BYTES) {
-      throw new Error("The Python source is too large to analyze.");
+      throw new Error(
+        `The ${definition.displayName} source is too large to analyze.`,
+      );
     }
 
     const parsed = await this.parser.parse(
@@ -87,7 +89,7 @@ class CFGBuildSession {
       );
       if (!currentFunction) {
         throw new Error(
-          "Place the cursor inside a Python function to generate its CFG.",
+          `Place the cursor inside a ${definition.displayName} function or method to generate its CFG.`,
         );
       }
       body = currentFunction.body;
@@ -98,7 +100,7 @@ class CFGBuildSession {
       mode: this.options.mode,
       fileName: this.options.fileName,
       functionName,
-      language: "python",
+      language: this.options.language,
       viewMode: this.options.viewMode,
       generatedAt: new Date().toISOString(),
     };
@@ -175,7 +177,7 @@ class CFGBuildSession {
   }
 
   private buildSequence(
-    statements: PythonAstNode[],
+    statements: ControlFlowNode[],
     predecessors: string[],
     firstLabel: CFGEdgeLabel | undefined,
     context: BuildContext,
@@ -202,7 +204,7 @@ class CFGBuildSession {
   }
 
   private buildStatement(
-    statement: PythonAstNode,
+    statement: ControlFlowNode,
     predecessors: string[],
     firstLabel: CFGEdgeLabel | undefined,
     context: BuildContext,
@@ -235,7 +237,7 @@ class CFGBuildSession {
         viewMode,
       );
     }
-    if (statement.kind === "with") {
+    if (statement.kind === "container") {
       return this.buildWith(
         statement,
         predecessors,
@@ -246,7 +248,7 @@ class CFGBuildSession {
     }
     if (statement.kind === "function") {
       const node = this.addNode(
-        `def ${statement.name}(...)`,
+        statement.label,
         "statement",
         statement.code,
         statement,
@@ -271,7 +273,7 @@ class CFGBuildSession {
       );
       return [];
     }
-    if (statement.kind === "raise") {
+    if (statement.kind === "throw") {
       const node = this.addNode(
         labelFor(statement),
         "statement",
@@ -342,7 +344,7 @@ class CFGBuildSession {
   }
 
   private buildSimple(
-    statement: PythonStatement,
+    statement: SimpleStatement,
     predecessors: string[],
     firstLabel: CFGEdgeLabel | undefined,
     kind: CFGNodeKind,
@@ -354,7 +356,7 @@ class CFGBuildSession {
   }
 
   private buildIf(
-    statement: PythonIfStatement,
+    statement: ConditionalStatement,
     predecessors: string[],
     firstLabel: CFGEdgeLabel | undefined,
     context: BuildContext,
@@ -365,7 +367,7 @@ class CFGBuildSession {
     const exits: string[] = [];
 
     for (const branch of statement.branches) {
-      if (branch.label === "else") {
+      if (branch.isElse) {
         const elseExits = this.buildSequence(
           branch.body,
           pendingFalseFrom,
@@ -378,9 +380,8 @@ class CFGBuildSession {
         break;
       }
 
-      const prefix = branch.label === "elif" ? "elif" : "if";
       const condition = this.addNode(
-        `${prefix} ${branch.condition ?? ""}`,
+        branch.conditionLabel ?? branch.condition ?? statement.code,
         "condition",
         branch.condition ?? statement.code,
         branch,
@@ -408,13 +409,13 @@ class CFGBuildSession {
   }
 
   private buildTry(
-    statement: PythonTryStatement,
+    statement: TryStatement,
     predecessors: string[],
     firstLabel: CFGEdgeLabel | undefined,
     context: BuildContext,
     viewMode: CFGViewMode,
   ): string[] {
-    const tryNode = this.addNode("try", "statement", statement.code, statement);
+    const tryNode = this.addNode(statement.label, "statement", statement.code, statement);
     this.connect(predecessors, tryNode.id, firstLabel ?? "next");
     const handlers = statement.handlers.map((handler) => ({
       statement: handler,
@@ -492,7 +493,7 @@ class CFGBuildSession {
   }
 
   private buildWith(
-    statement: PythonWithStatement,
+    statement: ContainerStatement,
     predecessors: string[],
     firstLabel: CFGEdgeLabel | undefined,
     context: BuildContext,
@@ -515,14 +516,14 @@ class CFGBuildSession {
   }
 
   private buildLoop(
-    statement: PythonLoopStatement,
+    statement: LoopStatement,
     predecessors: string[],
     firstLabel: CFGEdgeLabel | undefined,
     context: BuildContext,
     viewMode: CFGViewMode,
   ): string[] {
     const condition = this.addNode(
-      `${statement.loopKind} ${statement.condition}`,
+      statement.label,
       "loop",
       statement.code,
       statement,
@@ -601,7 +602,7 @@ class CFGBuildSession {
 
   private addTypeAgnosticRaiseDiagnostic(): void {
     const diagnostic =
-      "Raise matching is type-agnostic; exception edges show possible handlers and an unhandled path.";
+      "Exception matching is type-agnostic; exception edges show possible handlers and an unhandled path.";
     if (!this.diagnostics.includes(diagnostic)) {
       this.diagnostics.push(diagnostic);
     }
@@ -646,9 +647,9 @@ class CFGBuildSession {
   }
 }
 
-function compactStatements(statements: PythonAstNode[]): PythonAstNode[] {
-  const compacted: PythonAstNode[] = [];
-  let buffer: PythonStatement[] = [];
+function compactStatements(statements: ControlFlowNode[]): ControlFlowNode[] {
+  const compacted: ControlFlowNode[] = [];
+  let buffer: SimpleStatement[] = [];
 
   const flush = () => {
     if (buffer.length === 0) {
@@ -684,7 +685,7 @@ function compactStatements(statements: PythonAstNode[]): PythonAstNode[] {
   return compacted;
 }
 
-function labelFor(statement: PythonStatement): string {
+function labelFor(statement: SimpleStatement): string {
   const firstLine = statement.code.split("\n")[0] ?? statement.kind;
   return firstLine.trim();
 }
@@ -695,7 +696,7 @@ function truncate(value: string, maxLength: number): string {
     : value;
 }
 
-function toFunctionInfo(fn: PythonFunctionStatement): PythonFunctionInfo {
+function toFunctionInfo(fn: CallableStatement): FunctionInfo {
   return {
     name: fn.name,
     startLine: fn.startLine,

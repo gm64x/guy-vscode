@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { CFG, CFGEdge, CFGNode } from "../core/types";
+import { resolveSupportedLanguage } from "../core/languages/registry";
 
 export class EditorNavigator {
   private ignoreSelectionUntil = 0;
@@ -12,7 +13,7 @@ export class EditorNavigator {
   });
 
   async highlightNode(cfg: CFG | undefined, nodeId: string): Promise<void> {
-    if (!cfg || !vscode.workspace.getConfiguration("guy").get("highlightCodeOnNodeClick", true)) return;
+    if (!cfg || !vscode.workspace.getConfiguration("guy").get("highlightCodeOnNodeClick", true)) {return;}
     const node = cfg?.nodes.find((item) => item.id === nodeId);
     if (!node) {
       return;
@@ -21,7 +22,7 @@ export class EditorNavigator {
   }
 
   async highlightEdge(cfg: CFG | undefined, edgeId: string): Promise<void> {
-    if (!cfg || !vscode.workspace.getConfiguration("guy").get("highlightCodeOnNodeClick", true)) return;
+    if (!cfg || !vscode.workspace.getConfiguration("guy").get("highlightCodeOnNodeClick", true)) {return;}
     const edge = cfg?.edges.find((item) => item.id === edgeId);
     if (!edge) {
       return;
@@ -106,7 +107,12 @@ export class EditorNavigator {
 function isEditorForCfg(editor: vscode.TextEditor, cfg: CFG | undefined): boolean {
   const fileName = cfg?.sourceMeta.fileName;
   if (!fileName) {
-    return editor.document.languageId === "python" || editor.document.fileName.endsWith(".py");
+    return (
+      resolveSupportedLanguage(
+        editor.document.languageId,
+        editor.document.fileName,
+      ) === cfg?.sourceMeta.language
+    );
   }
   return editor.document.fileName === fileName;
 }

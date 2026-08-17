@@ -70,12 +70,12 @@ export interface CFGSourceMeta {
   mode: CFGSourceMode;
   fileName?: string;
   functionName?: string;
-  language: "python";
+  language: SupportedLanguage;
   viewMode: CFGViewMode;
   generatedAt: string;
 }
 
-export interface PythonFunctionInfo extends SourceRange {
+export interface FunctionInfo extends SourceRange {
   name: string;
 }
 
@@ -88,11 +88,12 @@ export interface CFG {
   independentPaths: CFGIndependentPath[];
   analysis: CFGAnalysis;
   sourceMeta: CFGSourceMeta;
-  functions: PythonFunctionInfo[];
+  functions: FunctionInfo[];
   diagnostics: string[];
 }
 
 export interface GenerateCFGOptions {
+  language: SupportedLanguage;
   source: string;
   fileName?: string;
   mode: CFGSourceMode;
@@ -114,3 +115,4 @@ export interface SourceOffset {
   line: number;
   column: number;
 }
+import type { SupportedLanguage } from "./languages/model";
