@@ -1,12 +1,18 @@
 import { randomBytes } from "node:crypto";
 import * as vscode from "vscode";
-import { CFG } from "../core/types";
+import { CFG, PreviewState } from "../core/types";
 
-export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri, cfg?: CFG): string {
+export function getWebviewHtml(
+  webview: vscode.Webview,
+  extensionUri: vscode.Uri,
+  cfg?: CFG,
+  previewState: PreviewState = { sourceLocked: false, updatesPaused: false },
+): string {
   const nonce = getNonce();
   const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "dist", "webview", "main.js"));
   const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, "dist", "webview", "main.css"));
-  const initial = JSON.stringify(cfg ?? null).replace(/</g, "\\u003c");
+  const initial = serializeForInlineScript(cfg ?? null);
+  const initialPreviewState = serializeForInlineScript(previewState);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -19,10 +25,14 @@ export function getWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri
 </head>
 <body>
   <div id="root"></div>
-  <script nonce="${nonce}">window.__GUY_INITIAL_CFG__ = ${initial};</script>
+  <script nonce="${nonce}">window.__GUY_INITIAL_CFG__ = ${initial}; window.__GUY_INITIAL_PREVIEW_STATE__ = ${initialPreviewState};</script>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
+}
+
+function serializeForInlineScript(value: unknown): string {
+  return JSON.stringify(value).replace(/</g, "\\u003c");
 }
 
 function getNonce(): string {

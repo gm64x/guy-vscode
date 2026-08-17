@@ -52,6 +52,12 @@ suite("Webview message validation", () => {
       isValidWebviewMessage({ type: "TOGGLE_VIEW_MODE", payload: {} }, cfg),
       false,
     );
+    assert.equal(isValidWebviewMessage({ type: "TOGGLE_SOURCE_LOCK" }, cfg), true);
+    assert.equal(isValidWebviewMessage({ type: "TOGGLE_LIVE_UPDATES" }, cfg), true);
+    assert.equal(
+      isValidWebviewMessage({ type: "TOGGLE_SOURCE_LOCK", payload: {} }, cfg),
+      false,
+    );
     assert.equal(isValidWebviewMessage(null, cfg), false);
   });
 });

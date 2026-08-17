@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
-import { CFG } from "../core/types";
+import { CFG, PreviewState } from "../core/types";
 import { getWebviewHtml } from "../webview/webviewHtml";
+
 
 export type WebviewMessage =
   | { type: "NODE_SELECTED"; payload: { nodeId: string } }
@@ -10,16 +11,26 @@ export type WebviewMessage =
       type: "FUNCTION_SELECTED";
       payload: { functionName: string; startLine: number };
     }
-  | { type: "TOGGLE_VIEW_MODE" };
+  | { type: "TOGGLE_VIEW_MODE" }
+  | { type: "TOGGLE_SOURCE_LOCK" }
+  | { type: "TOGGLE_LIVE_UPDATES" };
 
 export class GuyWebviewPanel {
   private panel: vscode.WebviewPanel | undefined;
   private cfg: CFG | undefined;
+  private previewState: PreviewState = {
+    sourceLocked: false,
+    updatesPaused: false,
+  };
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly onMessage: (message: WebviewMessage) => void,
   ) {}
+
+  get isOpen(): boolean {
+    return this.panel !== undefined;
+  }
 
   show(cfg: CFG): void {
     this.cfg = cfg;
@@ -54,6 +65,7 @@ export class GuyWebviewPanel {
         this.panel.webview,
         this.extensionUri,
         cfg,
+        this.previewState,
       );
     } else {
       this.panel.title = title;
@@ -65,11 +77,18 @@ export class GuyWebviewPanel {
 
   postCfg(cfg: CFG): void {
     this.cfg = cfg;
-    if (!this.panel) {
-      this.show(cfg);
-      return;
+    if (this.panel) {
+      this.panel.title = getPanelTitle(cfg);
+      void this.panel.webview.postMessage({ type: "CFG_DATA", payload: cfg });
     }
-    void this.panel.webview.postMessage({ type: "CFG_DATA", payload: cfg });
+  }
+
+  setPreviewState(state: PreviewState): void {
+    this.previewState = state;
+    void this.panel?.webview.postMessage({
+      type: "PREVIEW_STATE",
+      payload: state,
+    });
   }
 
   highlightNode(nodeId: string): void {
@@ -126,6 +145,8 @@ export function isValidWebviewMessage(
         );
     }
     case "TOGGLE_VIEW_MODE":
+    case "TOGGLE_SOURCE_LOCK":
+    case "TOGGLE_LIVE_UPDATES":
       return !("payload" in message);
     default:
       return false;

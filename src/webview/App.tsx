@@ -15,72 +15,8 @@ import {
 } from "@xyflow/react";
 import dagre from "@dagrejs/dagre";
 import "@xyflow/react/dist/style.css";
+import type { CFG, CFGEdge, CFGNode, PreviewState } from "../core/types";
 import "./styles.css";
-
-/* ---- Types ---- */
-
-type CFGNode = {
-  id: string;
-  label: string;
-  kind:
-    | "entry"
-    | "exit"
-    | "statement"
-    | "condition"
-    | "loop"
-    | "return"
-    | "merge";
-  code: string;
-  startLine: number;
-  startColumn: number;
-  endLine: number;
-  endColumn: number;
-};
-
-type CFGEdge = {
-  id: string;
-  from: string;
-  to: string;
-  label?: string;
-};
-
-type CFG = {
-  nodes: CFGNode[];
-  edges: CFGEdge[];
-  entryNodeId: string;
-  exitNodeId: string;
-  metrics: {
-    nodeCount: number;
-    edgeCount: number;
-    decisionCount: number;
-    connectedComponents: number;
-    cyclomaticComplexity: number;
-    simplifiedCyclomaticComplexity: number;
-  };
-  independentPaths: Array<{
-    id: string;
-    label: string;
-    nodeIds: string[];
-    edgeIds: string[];
-  }>;
-  analysis: {
-    highComplexityThreshold: number;
-    suggestions: string[];
-    independentPathLimitReason?: string;
-    showMetricsPanel?: boolean;
-    maxNodesBeforeWarning?: number;
-    graphLayout?: "top-bottom" | "left-right";
-  };
-  sourceMeta: {
-    mode: "file" | "selection" | "function";
-    fileName?: string;
-    functionName?: string;
-    viewMode: "simplified" | "detailed";
-    language: "python" | "java" | "php" | "c" | "go" | "rust";
-  };
-  functions: Array<{ name: string; startLine: number }>;
-  diagnostics: string[];
-};
 
 type WebviewState = "empty" | "loading" | "error" | "success";
 type SidebarTab = "nodes" | "edges" | "functions" | "paths";
@@ -88,6 +24,7 @@ type SidebarTab = "nodes" | "edges" | "functions" | "paths";
 declare global {
   interface Window {
     __GUY_INITIAL_CFG__?: CFG | null;
+    __GUY_INITIAL_PREVIEW_STATE__?: PreviewState;
     acquireVsCodeApi?: () => {
       postMessage: (message: unknown) => void;
     };
@@ -166,6 +103,10 @@ const ICON_PATHS: Record<string, string> = {
   chevronRight: "M9 6l6 6-6 6",
   list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
   search: "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm6.5-2.5L21 21",
+  lock: "M5 11h14v10H5V11zm3 0V7a4 4 0 0 1 8 0v4",
+  unlock: "M5 11h14v10H5V11zm3 0V7a4 4 0 0 1 7.5-2",
+  pause: "M8 5v14m8-14v14",
+  play: "M8 5l11 7-11 7V5z",
 };
 
 function Icon({ name, size = 15 }: { name: string; size?: number }) {
@@ -190,8 +131,8 @@ function Icon({ name, size = 15 }: { name: string; size?: number }) {
 /* ---- Helpers ---- */
 
 function getComplexityClass(value: number, threshold: number): string {
-  if (value <= threshold) return "good";
-  if (value <= threshold * 2) return "warning";
+  if (value <= threshold) {return "good";}
+  if (value <= threshold * 2) {return "warning";}
   return "critical";
 }
 
@@ -209,7 +150,7 @@ function toFlowGraph(
   selectedEdgeId?: string,
   selectedPath?: { nodeIds: string[]; edgeIds: string[] } | null,
 ): { nodes: Node[]; edges: Edge[] } {
-  if (!cfg) return { nodes: [], edges: [] };
+  if (!cfg) {return { nodes: [], edges: [] };}
 
   const nodeMap = new Map(cfg.nodes.map((n) => [n.id, n]));
   const g = new dagre.graphlib.Graph();
@@ -303,6 +244,12 @@ function App() {
   const [selectedPathId, setSelectedPathId] = useState<string | undefined>();
   const [activeTab, setActiveTab] = useState<SidebarTab>("nodes");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [previewState, setPreviewState] = useState<PreviewState>(
+    window.__GUY_INITIAL_PREVIEW_STATE__ ?? {
+      sourceLocked: false,
+      updatesPaused: false,
+    },
+  );
   const [flowNodes, setFlowNodes] = useState<Node[]>([]);
   const [flowEdges, setFlowEdges] = useState<Edge[]>([]);
   const reactFlow = useReactFlow();
@@ -325,6 +272,8 @@ function App() {
       } else if (msg.type === "HIGHLIGHT_NODE") {
         setSelectedNodeId(msg.payload.nodeId);
         setSelectedEdgeId(undefined);
+      } else if (msg.type === "PREVIEW_STATE") {
+        setPreviewState(msg.payload);
       }
     };
     window.addEventListener("message", listener);
@@ -333,7 +282,7 @@ function App() {
 
   // Recalculate dagre layout only when CFG changes (not on selection changes)
   useEffect(() => {
-    if (!cfg) return;
+    if (!cfg) {return;}
     const { nodes, edges } = toFlowGraph(cfg);
     setFlowNodes(nodes);
     setFlowEdges(edges);
@@ -341,7 +290,7 @@ function App() {
 
   // Re-apply selection styling without resetting positions
   useEffect(() => {
-    if (!cfg) return;
+    if (!cfg) {return;}
     const selectedPath = cfg.independentPaths.find(
       (p) => p.id === selectedPathId,
     );
@@ -412,7 +361,7 @@ function App() {
   const selectPath = useCallback(
     (pathId: string) => {
       const path = cfg?.independentPaths.find((i) => i.id === pathId);
-      if (!path) return;
+      if (!path) {return;}
       setSelectedPathId(pathId);
       setSelectedNodeId(undefined);
       setSelectedEdgeId(undefined);
@@ -450,17 +399,44 @@ function App() {
       <header>
         <div className="header-meta">
           {cfg ? (
-            <button
-              className="view-toggle"
-              title="Toggle Simplified / Detailed view"
-              onClick={() => vscode?.postMessage({ type: "TOGGLE_VIEW_MODE" })}
-            >
-              <Icon
-                name={viewMode === "simplified" ? "eye" : "eyeOff"}
-                size={12}
-              />
-              {viewMode === "simplified" ? "Simplified" : "Detailed"}
-            </button>
+            <>
+              <button
+                className={`preview-toggle${previewState.sourceLocked ? " active" : ""}`}
+                type="button"
+                title={previewState.sourceLocked
+                  ? "Follow the active editor"
+                  : "Keep the preview on the current file"}
+                aria-pressed={previewState.sourceLocked}
+                onClick={() => vscode?.postMessage({ type: "TOGGLE_SOURCE_LOCK" })}
+              >
+                <Icon name={previewState.sourceLocked ? "lock" : "unlock"} size={12} />
+                {previewState.sourceLocked ? "File Locked" : "Follow Editor"}
+              </button>
+              <button
+                className={`preview-toggle${previewState.updatesPaused ? " active" : ""}`}
+                type="button"
+                title={previewState.updatesPaused
+                  ? "Resume live graph updates"
+                  : "Pin the current graph version"}
+                aria-pressed={previewState.updatesPaused}
+                onClick={() => vscode?.postMessage({ type: "TOGGLE_LIVE_UPDATES" })}
+              >
+                <Icon name={previewState.updatesPaused ? "play" : "pause"} size={12} />
+                {previewState.updatesPaused ? "Version Pinned" : "Live Updates"}
+              </button>
+              <button
+                className="view-toggle"
+                type="button"
+                title="Toggle Simplified / Detailed view"
+                onClick={() => vscode?.postMessage({ type: "TOGGLE_VIEW_MODE" })}
+              >
+                <Icon
+                  name={viewMode === "simplified" ? "eye" : "eyeOff"}
+                  size={12}
+                />
+                {viewMode === "simplified" ? "Simplified" : "Detailed"}
+              </button>
+            </>
           ) : null}
           <IconButton
             title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -710,7 +686,7 @@ function Metric({
 }
 
 function Suggestions({ cfg }: { cfg: CFG }) {
-  if (!cfg.analysis.suggestions.length) return null;
+  if (!cfg.analysis.suggestions.length) {return null;}
   return (
     <section>
       <h2>Suggestions</h2>
@@ -737,7 +713,7 @@ function NodePreview({ node }: { node: CFGNode }) {
 }
 
 function highlightCode(code: string): React.ReactNode {
-  if (!code) return <span className="comment">—</span>;
+  if (!code) {return <span className="comment">—</span>;}
   const keywords = [
     "def",
     "class",
@@ -778,11 +754,11 @@ function highlightCode(code: string): React.ReactNode {
 
   return tokens.map((token, i) => {
     if (keywords.includes(token))
-      return (
+      {return (
         <span key={i} className="kw">
           {token}
         </span>
-      );
+      );}
 
     const quotePrefixes = ['"', "'", 'f"', "f'", 'r"', "r'"];
     const isStringStart =
@@ -820,17 +796,17 @@ function highlightCode(code: string): React.ReactNode {
     }
 
     if (/^\d+$/.test(token))
-      return (
+      {return (
         <span key={i} className="num">
           {token}
         </span>
-      );
+      );}
     if (token.startsWith("#"))
-      return (
+      {return (
         <span key={i} className="comment">
           {token}
         </span>
-      );
+      );}
     return <span key={i}>{token}</span>;
   });
 }

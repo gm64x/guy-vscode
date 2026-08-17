@@ -1,16 +1,25 @@
 import * as vscode from "vscode";
 import { CFGBuilder } from "./core/cfgBuilder";
-import { CFG, CFGViewMode } from "./core/types";
+import { CFG, CFGSourceMode, CFGViewMode, SourcePosition } from "./core/types";
 import { getLanguageDefinition, getSupportedLanguageNames, resolveSupportedLanguage } from "./core/languages/registry";
 import { EditorNavigator } from "./vscode/editorNavigation";
 import { GuyWebviewPanel, WebviewMessage } from "./vscode/webviewPanel";
 
+interface GraphSource {
+  uri: vscode.Uri;
+  mode: CFGSourceMode;
+  cursor?: SourcePosition;
+  selection?: vscode.Range;
+  snapshot?: string;
+}
+
 let currentCfg: CFG | undefined;
+let currentSource: GraphSource | undefined;
 let currentViewMode: CFGViewMode = "simplified";
-let lastFunctionCursor: { line: number; column: number } | undefined;
-let lastSelectionOffset: { line: number; column: number } | undefined;
-let lastSelectionSource: string | undefined;
-let lastSelectionFileName: string | undefined;
+let sourceLocked = false;
+let updatesPaused = false;
+let generationRevision = 0;
+let refreshTimer: ReturnType<typeof setTimeout> | undefined;
 let panel: GuyWebviewPanel;
 let navigator: EditorNavigator;
 
@@ -20,6 +29,7 @@ export function activate(context: vscode.ExtensionContext): void {
   panel = new GuyWebviewPanel(context.extensionUri, (message) =>
     handleWebviewMessage(message, builder),
   );
+  updatePreviewState();
 
   context.subscriptions.push(
     navigator,
@@ -49,10 +59,26 @@ export function activate(context: vscode.ExtensionContext): void {
         panel.highlightNode(node.id);
       }
     }),
+    vscode.workspace.onDidChangeTextDocument((event) => {
+      if (panel.isOpen && !updatesPaused && currentSource?.uri.toString() === event.document.uri.toString()) {
+        scheduleRefresh(builder);
+      }
+    }),
+    vscode.window.onDidChangeActiveTextEditor((editor) => {
+      if (!panel.isOpen || !currentSource || sourceLocked || updatesPaused || !editor || !isSupportedDocument(editor.document)) {
+        return;
+      }
+      if (currentSource?.uri.toString() !== editor.document.uri.toString()) {
+        void generateSource(builder, { uri: editor.document.uri, mode: "file" }, false, false, editor.document);
+      }
+    }),
   );
 }
 
 export function deactivate(): void {
+  if (refreshTimer) {
+    clearTimeout(refreshTimer);
+  }
   navigator?.dispose();
 }
 
@@ -61,23 +87,13 @@ async function generateFromFile(builder: CFGBuilder): Promise<void> {
   if (!editor) {
     return;
   }
-
-  try {
-    panel.loading();
-    currentCfg = await builder.generate({
-      source: editor.document.getText(),
-      language: resolveSupportedLanguage(editor.document.languageId, editor.document.fileName)!,
-      fileName: editor.document.fileName,
-      mode: "file",
-      viewMode: currentViewMode,
-      highComplexityThreshold: getHighComplexityThreshold(),
-      ...getDisplaySettings(),
-    });
-    if (getSetting("autoOpenPreview", true)) {panel.show(currentCfg);}
-    showDiagnostics(currentCfg);
-  } catch (error) {
-    showGenerationError(error);
-  }
+  await generateSource(
+    builder,
+    { uri: editor.document.uri, mode: "file" },
+    true,
+    true,
+    editor.document,
+  );
 }
 
 async function generateFromSelection(builder: CFGBuilder): Promise<void> {
@@ -93,30 +109,17 @@ async function generateFromSelection(builder: CFGBuilder): Promise<void> {
     return;
   }
 
-  lastSelectionOffset = {
-    line: editor.selection.start.line,
-    column: editor.selection.start.character,
-  };
-  lastSelectionSource = editor.document.getText(editor.selection);
-  lastSelectionFileName = editor.document.fileName;
-
-  try {
-    panel.loading();
-    currentCfg = await builder.generate({
-      source: editor.document.getText(editor.selection),
-      language: resolveSupportedLanguage(editor.document.languageId, editor.document.fileName)!,
-      fileName: editor.document.fileName,
+  await generateSource(
+    builder,
+    {
+      uri: editor.document.uri,
       mode: "selection",
-      viewMode: currentViewMode,
-      selectionOffset: lastSelectionOffset,
-      highComplexityThreshold: getHighComplexityThreshold(),
-      ...getDisplaySettings(),
-    });
-    if (getSetting("autoOpenPreview", true)) {panel.show(currentCfg);}
-    showDiagnostics(currentCfg);
-  } catch (error) {
-    showGenerationError(error);
-  }
+      selection: new vscode.Range(editor.selection.start, editor.selection.end),
+    },
+    true,
+    true,
+    editor.document,
+  );
 }
 
 async function generateFromCurrentFunction(builder: CFGBuilder): Promise<void> {
@@ -125,93 +128,40 @@ async function generateFromCurrentFunction(builder: CFGBuilder): Promise<void> {
     return;
   }
 
-  lastFunctionCursor = {
-    line: editor.selection.active.line,
-    column: editor.selection.active.character,
-  };
-
-  try {
-    panel.loading();
-    currentCfg = await builder.generate({
-      source: editor.document.getText(),
-      language: resolveSupportedLanguage(editor.document.languageId, editor.document.fileName)!,
-      fileName: editor.document.fileName,
+  await generateSource(
+    builder,
+    {
+      uri: editor.document.uri,
       mode: "function",
-      viewMode: currentViewMode,
-      cursor: lastFunctionCursor,
-      highComplexityThreshold: getHighComplexityThreshold(),
-      ...getDisplaySettings(),
-    });
-    if (getSetting("autoOpenPreview", true)) {panel.show(currentCfg);}
-    showDiagnostics(currentCfg);
-  } catch (error) {
-    showGenerationError(error);
-  }
+      cursor: {
+        line: editor.selection.active.line,
+        column: editor.selection.active.character,
+      },
+    },
+    true,
+    true,
+    editor.document,
+  );
 }
 
 async function toggleDetailMode(builder: CFGBuilder): Promise<void> {
-  currentViewMode =
-    currentViewMode === "simplified" ? "detailed" : "simplified";
-
-  if (!currentCfg) {
+  if (!currentCfg || !currentSource) {
     return;
   }
 
-  const document = await resolveDocumentForCfg(currentCfg);
-  if (!document) {
-    void vscode.window.showWarningMessage(
-      "Cannot toggle view mode: the source file is not available.",
-    );
-    return;
-  }
-
-  try {
-    panel.loading();
-    if (currentCfg.sourceMeta.mode === "selection" && lastSelectionOffset) {
-      if (lastSelectionSource !== undefined) {
-        currentCfg = await builder.generate({
-          source: lastSelectionSource,
-          language: currentCfg.sourceMeta.language,
-          fileName: lastSelectionFileName ?? document.fileName,
-          mode: "selection",
-          viewMode: currentViewMode,
-          selectionOffset: lastSelectionOffset,
-          highComplexityThreshold: getHighComplexityThreshold(),
-          ...getDisplaySettings(),
-        });
-      }
-    } else if (
-      currentCfg.sourceMeta.mode === "function" &&
-      lastFunctionCursor
-    ) {
-      currentCfg = await builder.generate({
-        source: document.getText(),
-        language: currentCfg.sourceMeta.language,
-        fileName: document.fileName,
-        mode: "function",
-        viewMode: currentViewMode,
-        cursor: lastFunctionCursor,
-        highComplexityThreshold: getHighComplexityThreshold(),
-        ...getDisplaySettings(),
-      });
-    } else {
-      currentCfg = await builder.generate({
-        source: document.getText(),
-        language: currentCfg.sourceMeta.language,
-        fileName: document.fileName,
-        mode: "file",
-        viewMode: currentViewMode,
-        highComplexityThreshold: getHighComplexityThreshold(),
-        ...getDisplaySettings(),
-      });
-    }
-    panel.postCfg(currentCfg);
-    showDiagnostics(currentCfg);
+  const nextViewMode = currentViewMode === "simplified" ? "detailed" : "simplified";
+  const updated = await generateSource(
+    builder,
+    currentSource,
+    false,
+    true,
+    undefined,
+    nextViewMode,
+  );
+  if (updated) {
     void vscode.window.showInformationMessage(
-      `GUY graph mode: ${currentViewMode}.`,
+      `GUY graph mode: ${nextViewMode}.`,
     );
-  } catch (error) {
-    showGenerationError(error);
   }
 }
 
@@ -237,6 +187,32 @@ function handleWebviewMessage(
   }
   if (message.type === "TOGGLE_VIEW_MODE") {
     void toggleDetailMode(builder);
+    return;
+  }
+  if (message.type === "TOGGLE_SOURCE_LOCK") {
+    sourceLocked = !sourceLocked;
+    updatePreviewState();
+    if (!sourceLocked) {
+      followActiveEditor(builder);
+    }
+    return;
+  }
+  if (message.type === "TOGGLE_LIVE_UPDATES") {
+    updatesPaused = !updatesPaused;
+    if (updatesPaused) {
+      generationRevision++;
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = undefined;
+      }
+      if (currentCfg) {
+        panel.postCfg(currentCfg);
+      }
+    }
+    updatePreviewState();
+    if (!updatesPaused && currentSource) {
+      void generateSource(builder, currentSource, false, false);
+    }
   }
 }
 
@@ -267,10 +243,6 @@ async function generateFunctionByLine(
     Math.min(startLine, editor.document.lineCount - 1),
   );
   editor.selection = new vscode.Selection(line.range.start, line.range.start);
-  lastFunctionCursor = {
-    line: editor.selection.active.line,
-    column: editor.selection.active.character,
-  };
   await generateFromCurrentFunction(builder);
 }
 
@@ -294,27 +266,15 @@ function showDiagnostics(cfg: CFG): void {
   }
 }
 
-function showGenerationError(error: unknown): void {
+function showGenerationError(error: unknown, notify = true): void {
+  if (!notify) {
+    return;
+  }
   const message = error instanceof Error ? error.message : String(error);
   panel.error(message);
   void vscode.window.showWarningMessage(message);
 }
 
-async function resolveDocumentForCfg(
-  cfg: CFG,
-): Promise<vscode.TextDocument | undefined> {
-  if (cfg.sourceMeta.fileName) {
-    try {
-      return await vscode.workspace.openTextDocument(
-        vscode.Uri.file(cfg.sourceMeta.fileName),
-      );
-    } catch {
-      // ignore
-    }
-  }
-  const active = getSupportedEditor(false);
-  return active?.document;
-}
 
 function getHighComplexityThreshold(): number {
   return vscode.workspace
@@ -326,6 +286,112 @@ function formatLanguageNames(names: string[]): string {
   return names.length < 2
     ? names.join("")
     : `${names.slice(0, -1).join(", ")} or ${names[names.length - 1]}`;
+}
+
+function updatePanel(cfg: CFG): void {
+  if (getSetting("autoOpenPreview", true)) {
+    panel.show(cfg);
+  } else {
+    panel.postCfg(cfg);
+  }
+}
+
+async function generateSource(
+  builder: CFGBuilder,
+  source: GraphSource,
+  reveal: boolean,
+  notify: boolean,
+  openDocument?: vscode.TextDocument,
+  viewMode: CFGViewMode = currentViewMode,
+): Promise<boolean> {
+  const revision = ++generationRevision;
+  if (reveal || notify) {
+    panel.loading();
+  }
+
+  try {
+    const document = openDocument ?? await vscode.workspace.openTextDocument(source.uri);
+    const language = resolveSupportedLanguage(document.languageId, document.fileName);
+    if (!language) {
+      return false;
+    }
+    const selection = source.mode === "selection" ? source.selection : undefined;
+    const sourceText = updatesPaused && source.snapshot !== undefined
+      ? source.snapshot
+      : selection ? document.getText(selection) : document.getText();
+    const cfg = await builder.generate({
+      source: sourceText,
+      language,
+      fileName: document.fileName,
+      mode: source.mode,
+      viewMode,
+      cursor: source.cursor,
+      selectionOffset: selection
+        ? { line: selection.start.line, column: selection.start.character }
+        : undefined,
+      highComplexityThreshold: getHighComplexityThreshold(),
+      ...getDisplaySettings(),
+    });
+    if (revision !== generationRevision) {
+      return false;
+    }
+    currentCfg = cfg;
+    currentSource = { ...source, snapshot: sourceText };
+    currentViewMode = viewMode;
+    if (reveal) {
+      updatePanel(cfg);
+    } else {
+      panel.postCfg(cfg);
+    }
+    if (notify) {
+      showDiagnostics(cfg);
+    }
+    return true;
+  } catch (error) {
+    if (revision === generationRevision) {
+      showGenerationError(error, notify);
+    }
+    return false;
+  }
+}
+
+function scheduleRefresh(builder: CFGBuilder): void {
+  if (refreshTimer) {
+    clearTimeout(refreshTimer);
+  }
+  refreshTimer = setTimeout(() => {
+    refreshTimer = undefined;
+    if (panel.isOpen && currentSource && !updatesPaused) {
+      void generateSource(builder, currentSource, false, false);
+    }
+  }, 300);
+}
+
+function followActiveEditor(builder: CFGBuilder): void {
+  if (updatesPaused) {
+    return;
+  }
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || !isSupportedDocument(editor.document)) {
+    return;
+  }
+  if (currentSource?.uri.toString() !== editor.document.uri.toString()) {
+    void generateSource(
+      builder,
+      { uri: editor.document.uri, mode: "file" },
+      false,
+      false,
+      editor.document,
+    );
+  }
+}
+
+function isSupportedDocument(document: vscode.TextDocument): boolean {
+  return resolveSupportedLanguage(document.languageId, document.fileName) !== undefined;
+}
+
+function updatePreviewState(): void {
+  panel.setPreviewState({ sourceLocked, updatesPaused });
 }
 
 function getSetting<T>(key: string, fallback: T): T {

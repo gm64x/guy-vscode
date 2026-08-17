@@ -352,7 +352,8 @@ button:focus-visible {
     padding: 0;
 }
 
-.view-toggle {
+.view-toggle,
+.preview-toggle {
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -364,8 +365,14 @@ button:focus-visible {
     color: var(--muted);
 }
 
-.view-toggle:hover {
+.view-toggle:hover,
+.preview-toggle:hover {
     color: var(--fg);
+}
+
+.preview-toggle.active {
+    border-color: var(--accent);
+    color: var(--accent);
 }
 
 /* Sidebar */

@@ -30,6 +30,8 @@ The initial cross-language coverage includes functions, methods and constructors
 ## Features
 
 - Generate a CFG from an entire file, a selected range, or the callable under the cursor.
+- Refresh the graph automatically while editing or switching between supported files.
+- Lock the preview to one file or pin the current graph version independently.
 - Switch between simplified and detailed graph views.
 - Navigate from graph nodes, edges, callables, and paths to source ranges.
 - Inspect nodes, edges, decisions, connected components, and cyclomatic complexity.

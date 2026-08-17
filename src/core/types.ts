@@ -20,6 +20,11 @@ export type CFGEdgeLabel =
 export type CFGSourceMode = "file" | "selection" | "function";
 export type CFGViewMode = "simplified" | "detailed";
 
+export interface PreviewState {
+  sourceLocked: boolean;
+  updatesPaused: boolean;
+}
+
 export interface SourceRange {
   startLine: number;
   startColumn: number;
