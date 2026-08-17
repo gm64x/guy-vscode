@@ -160,6 +160,10 @@ function convert(node: TreeSitterNode, context: ParseContext): ControlFlowNode |
     };
   }
 
+  if (node.type === "switch_statement") {
+    return switchStatement(node, context);
+  }
+
   if (node.type === "match_expression") {
     return matchStatement(node, context);
   }
@@ -197,6 +201,37 @@ function findCallable(node: TreeSitterNode): TreeSitterNode | undefined {
     }
   }
   return undefined;
+}
+
+function switchStatement(node: TreeSitterNode, context: ParseContext): ConditionalStatement {
+  const switchBody = childForField(node, "body");
+  const clauses = switchBody
+    ? namedChildren(switchBody).filter((child) =>
+        child.type === "case_statement" || child.type === "default_statement",
+      )
+    : [];
+  const branches = clauses.map((clause) => {
+    const value = childForField(clause, "value");
+    const branchBody = namedChildren(clause).flatMap((child) => {
+      if (child === value) {return [];}
+      const parsed = convert(child, context);
+      return parsed && parsed.kind !== "break" ? [parsed] : [];
+    });
+    const isDefault = clause.type === "default_statement";
+    return {
+      ...rangeFromNode(clause, context.offset),
+      condition: isDefault ? undefined : value?.text,
+      conditionLabel: isDefault ? undefined : `case ${value?.text ?? ""}`,
+      isElse: isDefault,
+      body: branchBody,
+    };
+  });
+  return {
+    ...rangeFromNode(node, context.offset),
+    kind: "if",
+    code: firstLine(node.text),
+    branches,
+  };
 }
 
 function matchStatement(node: TreeSitterNode, context: ParseContext): ConditionalStatement {

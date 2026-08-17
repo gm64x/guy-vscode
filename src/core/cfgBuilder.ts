@@ -365,17 +365,21 @@ class CFGBuildSession {
     let pendingFalseFrom = predecessors;
     let pendingLabel = firstLabel ?? "next";
     const exits: string[] = [];
+    const directExits: Array<{ from: string[]; label: CFGEdgeLabel }> = [];
 
     for (const branch of statement.branches) {
       if (branch.isElse) {
-        const elseExits = this.buildSequence(
-          branch.body,
-          pendingFalseFrom,
-          pendingLabel,
-          context,
-          viewMode,
-        );
-        exits.push(...elseExits);
+        if (branch.body.length === 0) {
+          directExits.push({ from: pendingFalseFrom, label: pendingLabel });
+        } else {
+          exits.push(...this.buildSequence(
+            branch.body,
+            pendingFalseFrom,
+            pendingLabel,
+            context,
+            viewMode,
+          ));
+        }
         pendingFalseFrom = [];
         break;
       }
@@ -387,24 +391,34 @@ class CFGBuildSession {
         branch,
       );
       this.connect(pendingFalseFrom, condition.id, pendingLabel);
-      const branchExits = this.buildSequence(
-        branch.body,
-        [condition.id],
-        "true",
-        context,
-        viewMode,
-      );
-      exits.push(...branchExits);
+      if (branch.body.length === 0) {
+        directExits.push({ from: [condition.id], label: "true" });
+      } else {
+        exits.push(...this.buildSequence(
+          branch.body,
+          [condition.id],
+          "true",
+          context,
+          viewMode,
+        ));
+      }
       pendingFalseFrom = [condition.id];
       pendingLabel = "false";
     }
 
-    if (pendingFalseFrom.length === 0 && exits.length === 0) {
+    if (
+      pendingFalseFrom.length === 0 &&
+      exits.length === 0 &&
+      directExits.length === 0
+    ) {
       return [];
     }
     const merge = this.addNode("merge", "merge", "", statement);
     this.connect(pendingFalseFrom, merge.id, pendingLabel);
     this.connect(exits, merge.id, "next");
+    for (const exit of directExits) {
+      this.connect(exit.from, merge.id, exit.label);
+    }
     return [merge.id];
   }
 
@@ -620,6 +634,9 @@ class CFGBuildSession {
     code: string,
     range: SourceRange,
   ): CFGNode {
+    if (this.nodes.length >= MAX_GRAPH_NODES) {
+      throw new Error("The generated CFG is too large to display.");
+    }
     const node: CFGNode = {
       id: `n${++this.nodeSequence}`,
       label: truncate(label || code || kind, 72),

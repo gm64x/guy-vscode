@@ -147,7 +147,29 @@ function convert(
     return { ...range, kind: simpleKind, code: node.text };
   }
 
-  if (node.type === "try_expression" || isPanic(node)) {
+  if (node.type === "try_expression") {
+    return {
+      ...range,
+      kind: "if",
+      code: node.text,
+      branches: [
+        {
+          ...range,
+          condition: node.text,
+          conditionLabel: `${node.text} succeeds`,
+          isElse: false,
+          body: [],
+        },
+        {
+          ...range,
+          isElse: true,
+          body: [{ ...range, kind: "throw", code: node.text }],
+        },
+      ],
+    };
+  }
+
+  if (isPanic(node)) {
     return { ...range, kind: "throw", code: node.text };
   }
 

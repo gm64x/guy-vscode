@@ -95,6 +95,10 @@ function convert(
     return parseCases(node, context);
   }
 
+  if (isPanicCall(node)) {
+    return { ...range, kind: "throw", code: node.text };
+  }
+
   const simpleKinds: Record<
     string,
     "return" | "throw" | "break" | "continue"
@@ -205,6 +209,15 @@ function findNamed(
   types: Set<string>,
 ): TreeSitterNode | undefined {
   return namedChildren(node).find((child) => types.has(child.type));
+}
+
+function isPanicCall(node: TreeSitterNode): boolean {
+  const expression = node.type === "expression_statement"
+    ? namedChildren(node)[0]
+    : node;
+  if (expression?.type !== "call_expression") {return false;}
+  const callable = childForField(expression, "function") ?? namedChildren(expression)[0];
+  return callable?.type === "identifier" && callable.text === "panic";
 }
 
 function functionName(text: string): string {

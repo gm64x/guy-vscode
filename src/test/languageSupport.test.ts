@@ -158,6 +158,47 @@ suite("Multi-language support", () => {
     }
   });
 
+  test("PHP switch preserves branch returns", async () => {
+    const source = "<?php function run($value) { switch ($value) { case 1: return 1; default: return 0; } after(); }";
+    const cfg = await generateFunction("php", source, "run");
+    const after = cfg.nodes.find((node) => node.code.includes("after()"));
+    assert.ok(cfg.nodes.some((node) => node.kind === "condition"));
+    assert.ok(cfg.edges.filter((edge) => edge.label === "return").length >= 2);
+    assert.ok(after && !reaches(cfg, cfg.entryNodeId, after.id));
+  });
+
+  test("Go panic terminates normal flow", async () => {
+    const source = "package main\nfunc run() { panic(\"failed\")\n after() }";
+    const cfg = await generateFunction("go", source, "run");
+    const panic = cfg.nodes.find((node) => node.code.includes("panic("));
+    const after = cfg.nodes.find((node) => node.code.includes("after()"));
+    assert.ok(panic && after);
+    assert.ok(cfg.edges.some((edge) =>
+      edge.from === panic.id && edge.to === cfg.exitNodeId && edge.label === "exception"
+    ));
+    assert.ok(!reaches(cfg, panic.id, after.id));
+  });
+
+  test("Rust question mark keeps success and error paths", async () => {
+    const source = "fn run() -> Result<(), Error> { work()?; after(); Ok(()) }";
+    const cfg = await generateFunction("rust", source, "run");
+    const decision = cfg.nodes.find((node) => node.kind === "condition" && node.code.includes("work()?"));
+    const after = cfg.nodes.find((node) => node.code.includes("after()"));
+    assert.ok(decision && after);
+    assert.ok(reaches(cfg, decision.id, after.id));
+    assert.ok(cfg.edges.some((edge) => edge.label === "exception" && edge.to === cfg.exitNodeId));
+  });
+
+  test("empty branches preserve true and false edges", async () => {
+    const source = "class Demo { void run(boolean ready) { if (ready) {} else {} } }";
+    const cfg = await generateFunction("java", source, "run");
+    const condition = cfg.nodes.find((node) => node.kind === "condition");
+    assert.ok(condition);
+    const labels = cfg.edges.filter((edge) => edge.from === condition.id).map((edge) => edge.label);
+    assert.ok(labels.includes("true"));
+    assert.ok(labels.includes("false"));
+  });
+
   test("Java and PHP throw route to handlers and through finally", async () => {
     const fixtures: Array<[SupportedLanguage, string]> = [
       [
