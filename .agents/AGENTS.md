@@ -27,6 +27,16 @@ GUY é uma extensão para VS Code que gera grafos de fluxo de controle (CFGs) pa
 
 Não versione `dist/`, `out/`, `node_modules/`, `.vscode-test/` nem arquivos `.vsix`; são artefatos gerados.
 
+## Versionamento obrigatório
+
+- Toda entrega que altere código, comportamento, configuração, dependências, comandos, webview ou conteúdo empacotado da extensão deve aumentar a versão antes de ser concluída. Isso é necessário para que o VS Code reconheça e instale a atualização.
+- Use versionamento semântico. Por padrão, incremente o patch (`0.1.3` → `0.1.4`); use minor ou major somente quando o escopo da mudança justificar.
+- Atualize sempre as versões de `package.json`, `package-lock.json` e do pacote raiz em `package-lock.json` de forma sincronizada.
+- Execute `npm run package` depois do bump para validar o bundle com a versão final.
+- Nunca reutilize uma versão ou tag existente. Tags de release devem usar o formato `v<versão>`, por exemplo `v0.1.4`.
+- Crie commit, tag ou faça push somente quando o usuário solicitar explicitamente. Quando solicitado, use um commit Conventional Commits como `chore(release): bump version to 0.1.4`.
+- Mudanças exclusivamente em documentação interna, como `.agents/AGENTS.md`, não exigem bump porque não alteram a extensão distribuída.
+
 ## Comandos de desenvolvimento
 
 | Comando | Quando executar |
