@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-09-26
+
+### Changed
+
+- Release workflow now publishes to the VS Code Marketplace under the `gm64x` publisher, in addition to the existing GitHub Release.
+
+## [0.1.7] - 2026-08-17
+
+### Fixed
+
+- Prevented graph controls from overlapping in the CFG preview.
+
+## [0.1.6] - 2026-08-17
+
 ### Added
 
 - Unsupported control-flow syntax warnings with construct names, source locations, and code previews for Python, Java, PHP, C, Go, and Rust.
