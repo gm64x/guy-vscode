@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-09-26
+
+### Fixed
+
+- Fixed the release workflow so Marketplace publishing is skipped cleanly when `VSCE_PAT` is not configured.
+
 ## [0.1.8] - 2026-09-26
 
 ### Changed
