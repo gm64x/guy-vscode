@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+message: "Se você usar o GUY, cite-o usando os metadados abaixo. / If you use GUY, please cite it using the metadata below."
+type: software
+title: "GUY - Control Flow Graphs"
+abstract: >-
+  GUY is a Visual Studio Code extension that generates interactive
+  control-flow graphs for Python, Java, PHP, C, Go and Rust, computes
+  cyclomatic complexity and independent path metrics, and links each
+  graph node back to its source code.
+authors:
+  - given-names: Gabriel Maia
+    family-names: Miguel
+    orcid: "https://orcid.org/0009-0002-9083-8773"
+    affiliation: "Instituto Federal de Educação, Ciência e Tecnologia de São Paulo (IFSP), Câmpus São João da Boa Vista"
+version: 0.1.10
+date-released: 2026-10-09
+license: MIT
+repository-code: "https://github.com/gm64x/guy-vscode"
+url: "https://marketplace.visualstudio.com/items?itemName=gm64x.guy"
+keywords:
+  - control flow graph
+  - cyclomatic complexity
+  - static analysis
+  - structural testing
+  - code visualization
+  - tree-sitter
+  - visual studio code
+  - vscode extension
+references:
+  - type: thesis
+    title: "GUY: ferramenta de análise de códigos-fonte para gerar, automaticamente, o Grafo de Fluxo de Controle (GFC)"
+    authors:
+      - given-names: Gabriel Maia
+        family-names: Miguel
+        orcid: "https://orcid.org/0009-0002-9083-8773"
+    thesis-type: "Trabalho de Conclusão de Curso (Bacharelado em Ciência da Computação)"
+    institution:
+      name: "Instituto Federal de Educação, Ciência e Tecnologia de São Paulo (IFSP), Câmpus São João da Boa Vista"
+      city: "São João da Boa Vista"
+      country: BR
+    year: 2026
+    languages:
+      - por
+    repository: "https://github.com/gm64x/guy-tex"
+    keywords:
+      - grafo de fluxo de controle
+      - complexidade ciclomática
+      - análise estática
+      - teste estrutural

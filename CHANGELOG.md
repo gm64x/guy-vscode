@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-10-09
+
+### Added
+
+- Added `CITATION.cff` so the project can be cited from GitHub.
+
 ## [0.1.9] - 2026-09-26
 
 ### Fixed
