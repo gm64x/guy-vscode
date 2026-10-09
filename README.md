@@ -11,6 +11,7 @@ Interactive control-flow graphs for Python, Java, PHP, C, Go, and Rust — direc
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.120.0-007ACC?style=for-the-badge&logo=visual-studio-code&logoColor=white)](https://code.visualstudio.com/)
 [![GitHub stars](https://img.shields.io/github/stars/gm64x/guy-vscode?style=for-the-badge&logo=github)](https://github.com/gm64x/guy-vscode/stargazers)
 [![License](https://img.shields.io/github/license/gm64x/guy-vscode?style=for-the-badge)](LICENSE.txt)
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.23271651-1682D4?style=for-the-badge&logo=zenodo&logoColor=white)](https://doi.org/10.5281/zenodo.23271651)
 
 </div>
 
