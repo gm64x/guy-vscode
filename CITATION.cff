@@ -15,6 +15,14 @@ authors:
 version: 0.1.10
 date-released: 2026-10-09
 license: MIT
+doi: 10.5281/zenodo.23271651
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23271651
+    description: "Todas as versões (sempre aponta para a mais recente) / All versions"
+  - type: doi
+    value: 10.5281/zenodo.23271652
+    description: "Versão 0.1.10 / Version 0.1.10"
 repository-code: "https://github.com/gm64x/guy-vscode"
 url: "https://marketplace.visualstudio.com/items?itemName=gm64x.guy"
 keywords:
